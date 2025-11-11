@@ -23,9 +23,9 @@ def main():
     trainer.train(
         data_dir=data_dir,
         output_dir=output_dir,
-        epochs=10,
+        epochs=20,  # More epochs for stronger style transfer
         batch_size=1,
-        lr=1e-4
+        lr=5e-5  # Higher LR for stronger adaptation
     )
     
     print("\nTraining complete!")

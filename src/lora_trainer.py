@@ -1,7 +1,6 @@
 """LoRA fine-tuning for Stable Diffusion"""
 import torch
-from diffusers import StableDiffusionPipeline, UNet2DConditionModel
-from peft import LoraConfig, get_peft_model, TaskType
+from diffusers import StableDiffusionPipeline
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from PIL import Image
@@ -38,32 +37,33 @@ class PosterDataset(Dataset):
         # Get genre tags for this image
         filename = self.images[idx].name
         genres = self.metadata.get(filename, [])
-        prompt = "cinematic poster, " + ", ".join(genres) if genres else "cinematic poster"
+        # Natural poster prompt - avoid SD keywords
+        prompt = "movie poster, " + ", ".join(genres) if genres else "movie poster"
         
         return img_tensor, prompt
 
 class LoRATrainer:
-    def __init__(self, model_id="runwayml/stable-diffusion-v1-5"):
+    def __init__(self, model_id="runwayml/stable-diffusion-v1-5", lora_rank=4):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"CUDA available: {torch.cuda.is_available()}")
         print(f"Training on device: {self.device}")
         
+        # Use float32 for training stability
         self.pipe = StableDiffusionPipeline.from_pretrained(
             model_id,
-            torch_dtype=torch.float16 if self.device == "cuda" else torch.float32
-        )
-        self.pipe = self.pipe.to(self.device)
+            torch_dtype=torch.float32
+        ).to(self.device)
         
-        # Configure LoRA
-        lora_config = LoraConfig(
-            r=16,
-            lora_alpha=32,
-            target_modules=["to_k", "to_q", "to_v", "to_out.0"],
-            lora_dropout=0.1,
-        )
+        # Freeze all parameters
+        self.pipe.unet.requires_grad_(False)
+        self.pipe.text_encoder.requires_grad_(False)
+        self.pipe.vae.requires_grad_(False)
         
-        # Apply LoRA to UNet
-        self.pipe.unet = get_peft_model(self.pipe.unet, lora_config)
-        self.pipe.unet.print_trainable_parameters()
+        # Unfreeze more layers for stronger style adaptation
+        for name, param in self.pipe.unet.named_parameters():
+            # Cross-attention (content) + Self-attention (style) + Conv layers (color/texture)
+            if "attn2" in name or "attn1" in name or "conv_out" in name or "conv_in" in name:
+                param.requires_grad = True
     
     def train(self, data_dir, output_dir="models/poster_lora", epochs=10, batch_size=1, lr=1e-4):
         """Train LoRA adapters on poster dataset"""
@@ -75,15 +75,19 @@ class LoRATrainer:
         print(f"Training LoRA on {len(dataset)} images")
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
         
-        # Only train LoRA parameters
+        # Train only unfrozen parameters
         self.pipe.unet.train()
-        optimizer = torch.optim.AdamW(self.pipe.unet.parameters(), lr=lr)
+        trainable_params = [p for p in self.pipe.unet.parameters() if p.requires_grad]
+        total_params = sum(p.numel() for p in self.pipe.unet.parameters())
+        trainable_count = sum(p.numel() for p in trainable_params)
+        print(f"Trainable: {trainable_count:,} / {total_params:,} ({100*trainable_count/total_params:.2f}%)")
+        optimizer = torch.optim.AdamW(trainable_params, lr=lr)
         
         for epoch in range(epochs):
             epoch_loss = 0
             for batch_data in tqdm(dataloader, desc=f"Epoch {epoch+1}/{epochs}"):
                 batch_imgs, batch_prompts = batch_data
-                batch_imgs = batch_imgs.to(self.device)
+                batch_imgs = batch_imgs.to(self.device, dtype=self.pipe.vae.dtype)
                 
                 # Encode images to latent space
                 with torch.no_grad():
@@ -105,8 +109,8 @@ class LoRATrainer:
                 # Predict noise with LoRA-enhanced UNet
                 noise_pred = self.pipe.unet(noisy_latents, timesteps, encoder_hidden_states).sample
                 
-                # Calculate loss
-                loss = torch.nn.functional.mse_loss(noise_pred, noise)
+                # Calculate loss with float32
+                loss = torch.nn.functional.mse_loss(noise_pred.float(), noise.float(), reduction="mean")
                 
                 if torch.isnan(loss):
                     print("Warning: NaN loss detected, skipping batch")
@@ -114,7 +118,7 @@ class LoRATrainer:
                 
                 optimizer.zero_grad()
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(self.pipe.unet.parameters(), 1.0)
+                torch.nn.utils.clip_grad_norm_(trainable_params, 1.0)
                 optimizer.step()
                 
                 epoch_loss += loss.item()
@@ -125,22 +129,11 @@ class LoRATrainer:
         return self.pipe
     
     def save(self, output_path):
-        """Save LoRA adapters"""
+        """Save fine-tuned weights"""
         os.makedirs(output_path, exist_ok=True)
-        self.pipe.unet.save_pretrained(output_path)
-        print(f"LoRA adapters saved to {output_path}")
-    
-    @classmethod
-    def load_lora(cls, base_model_id="runwayml/stable-diffusion-v1-5", lora_path="models/poster_lora"):
-        """Load pipeline with LoRA adapters"""
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        pipe = StableDiffusionPipeline.from_pretrained(
-            base_model_id,
-            torch_dtype=torch.float16 if device == "cuda" else torch.float32
-        )
         
-        # Load LoRA weights
-        if os.path.exists(lora_path):
-            pipe.unet = UNet2DConditionModel.from_pretrained(lora_path)
-        
-        return pipe.to(device)
+        # Save all trained weights
+        state_dict = {k: v for k, v in self.pipe.unet.state_dict().items() 
+                     if any(x in k for x in ["attn2", "attn1", "conv_out", "conv_in"])}
+        torch.save(state_dict, os.path.join(output_path, "lora_weights.pth"))
+        print(f"Fine-tuned weights saved to {output_path}")

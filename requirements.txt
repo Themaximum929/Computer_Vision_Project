@@ -1,13 +1,14 @@
-# For CUDA 11.8 (most common)
+# For CUDA 12.x (12.1, 12.4, etc.)
 torch>=2.0.0
 torchvision>=0.15.0
-# Install with: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+# Install with: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 
-# For CUDA 12.1
-# pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+# For CUDA 11.8
+# pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 
 # For CPU only (not recommended)
 # pip install torch torchvision
+opencv-python>=4.8.0
 diffusers>=0.25.0
 transformers>=4.35.0
 accelerate>=0.25.0

@@ -43,7 +43,8 @@ class PosterEvaluator:
         
         results = {
             "aesthetic": self.aesthetic_score(image),
-            "resolution": self.resolution_check(image)
+            "resolution": self.resolution_check(image),
+            "instruction_following": self.resolution_check(image)["meets_target"]
         }
         
         return results
