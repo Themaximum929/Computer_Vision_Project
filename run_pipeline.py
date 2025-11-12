@@ -11,7 +11,9 @@ def main():
     parser.add_argument("--lora-path", type=str, default="models/poster_lora", help="Path to LoRA weights")
     parser.add_argument("--seed", type=int, default=None, help="Random seed for reproducibility")
     parser.add_argument("--no-text-removal", action="store_true", help="Disable text removal")
-    parser.add_argument("--aggressive-text-removal", action="store_true", help="Use aggressive text removal (recommended)")
+    parser.add_argument("--aggressive-text-removal", action="store_true", help="Use aggressive text removal")
+    parser.add_argument("--no-text-mode", action="store_true", help="Use specialized text-free generation (RECOMMENDED)")
+    parser.add_argument("--no-super-res", action="store_true", help="Disable super-resolution enhancement")
     args = parser.parse_args()
     
     # Initialize pipeline
@@ -19,7 +21,9 @@ def main():
         lora_path=args.lora_path if args.lora else None,
         use_lora=args.lora,
         remove_text=not args.no_text_removal,
-        aggressive_text_removal=args.aggressive_text_removal
+        aggressive_text_removal=args.aggressive_text_removal,
+        no_text_mode=args.no_text_mode,
+        super_resolution=not args.no_super_res
     )
     
     # Generate poster

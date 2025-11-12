@@ -84,6 +84,28 @@ trainer.save("models/poster_lora")
 - Comprehensive evaluation metrics
 - Ablation studies on agent contributions
 
+## 🌐 Web Interface (Gradio)
+
+```bash
+# Install Gradio
+pip install gradio>=4.0.0
+
+# Launch web interface
+python app.py
+
+# Or simple interface
+python app_simple.py
+```
+
+Access at **http://localhost:7860**
+
+**Features:**
+- 🎨 Interactive web UI
+- ⚙️ All pipeline options
+- 📊 Real-time metrics
+- 🔄 Reproducible with seeds
+- 📱 Mobile-friendly
+
 ## 🚀 Quick Start (3 Commands)
 
 ```bash
@@ -131,16 +153,22 @@ python src/experiment.py
 
 ## 💡 Usage Examples
 
-### Single Poster Generation
+### Web Interface (Easiest)
 ```bash
-# Baseline (no fine-tuning)
-python run_pipeline.py "dark fantasy warrior"
+python app.py
+# Open http://localhost:7860 in browser
+```
 
-# With LoRA fine-tuning
-python run_pipeline.py "dark fantasy warrior" --lora
+### Single Poster Generation (CLI)
+```bash
+# RECOMMENDED: LoRA + No-Text Mode (clean, professional posters)
+python run_pipeline.py "dark fantasy warrior" --lora --no-text-mode
 
 # With custom output and seed
-python run_pipeline.py "cyberpunk city" --lora --output my_poster.png --seed 42
+python run_pipeline.py "cyberpunk city" --lora --no-text-mode --seed 42
+
+# Baseline (no fine-tuning)
+python run_pipeline.py "dark fantasy warrior"
 ```
 
 ### Batch Generation
@@ -210,6 +238,8 @@ Keywords → [Agent 1: Concept Expander] → Creative Brief
 
 | Script | Purpose | Time |
 |--------|---------|------|
+| `app.py` | **Web interface (full)** | - |
+| `app_simple.py` | **Web interface (simple)** | - |
 | `test_pipeline.py` | Test all components | 1 min |
 | `src/collect_data.py` | Scrape training data | 2 min |
 | `src/train_lora.py` | Train LoRA model | 10-30 min |

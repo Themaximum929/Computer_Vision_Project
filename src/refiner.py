@@ -1,34 +1,45 @@
 """Quality Refiner Agent - Post-processing for quality enhancement"""
 from PIL import Image, ImageEnhance, ImageFilter
 import numpy as np
+import cv2
 
 class QualityRefiner:
     def __init__(self):
         pass
     
-    def refine(self, image):
-        """Apply post-processing refinements with film-like color grading"""
-        # Film-like color grading - reduce oversaturation
-        enhancer = ImageEnhance.Color(image)
-        image = enhancer.enhance(0.9)  # Slightly desaturate for natural look
+    def enhance(self, image):
+        """Enhanced post-processing - smooth, sharp, vibrant"""
+        img_array = np.array(image)
         
-        # Enhance contrast for depth
-        enhancer = ImageEnhance.Contrast(image)
-        image = enhancer.enhance(1.15)
+        # 1. Denoise (remove graininess)
+        img_array = cv2.fastNlMeansDenoisingColored(img_array, None, 10, 10, 7, 21)
         
-        # Subtle sharpness
-        enhancer = ImageEnhance.Sharpness(image)
-        image = enhancer.enhance(1.1)
+        # 2. Bilateral filter (smooth while preserving edges)
+        img_array = cv2.bilateralFilter(img_array, 9, 75, 75)
         
-        # Warm/cool color balance
-        img_array = np.array(image).astype(float)
-        # Slight warm tint (reduce blue, boost red/yellow)
-        img_array[:,:,2] *= 0.95  # Reduce blue slightly
-        img_array[:,:,0] *= 1.02  # Boost red slightly
+        # 3. Gentle unsharp mask (sharpness without grain)
+        gaussian = cv2.GaussianBlur(img_array, (0, 0), 1.5)
+        img_array = cv2.addWeighted(img_array, 1.3, gaussian, -0.3, 0)
         img_array = np.clip(img_array, 0, 255).astype(np.uint8)
         image = Image.fromarray(img_array)
         
+        # 4. Vibrant colors (baseline style)
+        enhancer = ImageEnhance.Color(image)
+        image = enhancer.enhance(1.15)  # More saturated
+        
+        # 5. Contrast
+        enhancer = ImageEnhance.Contrast(image)
+        image = enhancer.enhance(1.15)
+        
+        # 6. Brightness
+        enhancer = ImageEnhance.Brightness(image)
+        image = enhancer.enhance(1.05)
+        
         return image
+    
+    def refine(self, image):
+        """Backward compatibility"""
+        return self.enhance(image)
     
     def detect_and_fix_artifacts(self, image):
         """Detect and reduce common artifacts"""

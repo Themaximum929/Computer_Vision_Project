@@ -29,22 +29,38 @@ class VisualGenerator:
             else:
                 print(f"Warning: No weights found at {weights_file}")
     
-    def generate(self, prompt, width=720, height=1280, num_inference_steps=50, guidance_scale=7.5, seed=None):
+    def generate(self, prompt, width=720, height=1280, num_inference_steps=60, guidance_scale=7.5, seed=None):
         """Generate poster image from prompt"""
         generator = torch.Generator(device=self.device)
         if seed is not None:
             generator = generator.manual_seed(seed)
         
-        # Strong negative prompt - prevent text generation
-        negative_prompt = "text, words, letters, typography, font, title, subtitle, caption, watermark, logo, signature, writing, alphabet, numbers, symbols, oversaturated, neon colors, artificial colors, digital art, 3d render, blurry, low quality, distorted, deformed"
+        # VERY strong negative prompt - absolutely no text
+        negative_prompt = (
+            "text, words, letters, typography, font, title, subtitle, caption, label, "
+            "watermark, logo, signature, writing, alphabet, characters, numbers, digits, "
+            "symbols, signs, banner, headline, tagline, slogan, credits, names, "
+            "readable text, written words, printed text, handwriting, calligraphy, "
+            "oversaturated, neon colors, artificial colors, digital art, 3d render, "
+            "blurry, low quality, distorted, deformed, ugly, bad anatomy"
+        )
+        
+        # Generate at slightly higher resolution for better quality
+        gen_width = int(width * 1.1)
+        gen_height = int(height * 1.1)
         
         image = self.pipe(
             prompt,
             negative_prompt=negative_prompt,
-            width=width,
-            height=height,
+            width=gen_width,
+            height=gen_height,
             num_inference_steps=num_inference_steps,
-            guidance_scale=8.5,  # Higher guidance to follow negative prompt better
+            guidance_scale=9.5,
             generator=generator
         ).images[0]
+        
+        # Downscale to target (improves sharpness)
+        if image.size != (width, height):
+            image = image.resize((width, height), Image.Resampling.LANCZOS)
+        
         return image
