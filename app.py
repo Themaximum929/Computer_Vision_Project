@@ -4,17 +4,18 @@ from src.pipeline import Key2PosterPipeline
 from pathlib import Path
 import time
 
-def get_pipeline(baseline_style, add_title, remove_text, aggressive_text_removal, super_resolution):
+def get_pipeline(baseline_style, genre_lora, add_title, remove_text, aggressive_text_removal, super_resolution):
     """Create pipeline with specified settings (no caching for accurate timing)"""
     return Key2PosterPipeline(
         baseline_style=baseline_style,
+        genre_lora=genre_lora,
         add_title=add_title,
         remove_text=remove_text,
         aggressive_text_removal=aggressive_text_removal,
         super_resolution=super_resolution
     )
 
-def generate_poster(keywords, baseline_style, add_title, remove_text, aggressive_text_removal, 
+def generate_poster(keywords, baseline_style, genre_lora, add_title, remove_text, aggressive_text_removal, 
                    super_resolution, seed):
     """Generate poster from keywords"""
     try:
@@ -35,7 +36,7 @@ def generate_poster(keywords, baseline_style, add_title, remove_text, aggressive
             return None, f"❌ Error: Please provide 2-5 keywords (you provided {len(keyword_list)})"
         
         # Create pipeline with current settings
-        pipeline = get_pipeline(baseline_style, add_title, remove_text, aggressive_text_removal, super_resolution)
+        pipeline = get_pipeline(baseline_style, genre_lora, add_title, remove_text, aggressive_text_removal, super_resolution)
         
         # Generate
         start_time = time.time()
@@ -72,7 +73,8 @@ def generate_poster(keywords, baseline_style, add_title, remove_text, aggressive
 {'- Title Overlay' if add_title else ''}
 
 **Settings:**
-- Style: {'Baseline (Vibrant)' if baseline_style else 'LoRA (Cinematic)'}
+- Style: {'Baseline' if baseline_style else 'Genre-LoRA' if genre_lora else 'Standard'}
+- Genre Detection: {'✓' if genre_lora else '✗'}
 - Title Overlay: {'✓' if add_title else '✗'}
 - Text Removal: {'Aggressive' if aggressive_text_removal else 'Standard' if remove_text else 'Disabled'}
 - Super-Resolution: {'✓' if super_resolution else '✗'}
@@ -107,9 +109,15 @@ with gr.Blocks(title="Key2Poster: AI Poster Generator", theme=gr.themes.Soft()) 
             gr.Markdown("### Generation Settings")
             
             baseline_style = gr.Checkbox(
-                label="Baseline Style (Recommended)",
+                label="Baseline Style",
+                value=False,
+                info="Use baseline SD (no LoRA)"
+            )
+            
+            genre_lora = gr.Checkbox(
+                label="Genre-Based LoRA (Recommended)",
                 value=True,
-                info="Use baseline SD for vibrant, aesthetic posters"
+                info="Auto-detect genre and use genre-specific LoRA"
             )
             
             add_title = gr.Checkbox(
@@ -176,13 +184,13 @@ with gr.Blocks(title="Key2Poster: AI Poster Generator", theme=gr.themes.Soft()) 
     gr.Markdown("### 📚 Example Keywords")
     gr.Examples(
         examples=[
-            ["space exploration adventure", True, True, True, True, True, 42],
-            ["dark fantasy warrior", True, True, True, True, True, 123],
-            ["cyberpunk city noir", True, True, True, True, True, 456],
-            ["romantic sunset beach", True, True, True, True, True, 789],
-            ["epic battle scene", True, True, True, True, True, 999],
+            ["space exploration adventure", False, True, True, True, True, True, 42],
+            ["dark fantasy warrior", False, True, True, True, True, True, 123],
+            ["cyberpunk city noir", False, True, True, True, True, True, 456],
+            ["romantic sunset beach", False, True, True, True, True, True, 789],
+            ["epic battle scene", False, True, True, True, True, True, 999],
         ],
-        inputs=[keywords_input, baseline_style, add_title, remove_text, 
+        inputs=[keywords_input, baseline_style, genre_lora, add_title, remove_text, 
                 aggressive_text_removal, super_resolution, seed_input],
         label="Click to try"
     )
@@ -190,47 +198,48 @@ with gr.Blocks(title="Key2Poster: AI Poster Generator", theme=gr.themes.Soft()) 
     # Event handlers
     generate_btn.click(
         fn=generate_poster,
-        inputs=[keywords_input, baseline_style, add_title, remove_text, 
+        inputs=[keywords_input, baseline_style, genre_lora, add_title, remove_text, 
                 aggressive_text_removal, super_resolution, seed_input],
         outputs=[output_image, output_info]
     )
     
     # Preset handlers
     def set_best_quality():
-        return True, True, True, True, True
+        return False, True, True, True, True, True
     
     def set_fast():
-        return True, True, False, False, False
+        return False, True, True, False, False, False
     
     def set_experimental():
-        return False, True, True, True, True
+        return True, False, True, True, True, True
     
     preset_best.click(
         fn=set_best_quality,
-        outputs=[baseline_style, add_title, remove_text, aggressive_text_removal, super_resolution]
+        outputs=[baseline_style, genre_lora, add_title, remove_text, aggressive_text_removal, super_resolution]
     )
     
     preset_fast.click(
         fn=set_fast,
-        outputs=[baseline_style, add_title, remove_text, aggressive_text_removal, super_resolution]
+        outputs=[baseline_style, genre_lora, add_title, remove_text, aggressive_text_removal, super_resolution]
     )
     
     preset_experimental.click(
         fn=set_experimental,
-        outputs=[baseline_style, add_title, remove_text, aggressive_text_removal, super_resolution]
+        outputs=[baseline_style, genre_lora, add_title, remove_text, aggressive_text_removal, super_resolution]
     )
     
     gr.Markdown("""
     ---
     ### 📖 Tips
-    - **Best Quality:** Baseline Style + Title Overlay + Aggressive Text Removal
+    - **Best Quality:** Genre-LoRA + Title Overlay + Aggressive Text Removal
     - **Fast Generation:** Disable text removal and super-resolution
-    - **Vibrant Colors:** Use Baseline Style (better aesthetics)
+    - **Genre-Specific:** Enable Genre-LoRA for style matching
     - **Reproducible:** Set a seed value (any number > 0)
     
-    ### 🎯 Grading Features
-    - ✅ Multi-agent architecture (6 specialized agents)
-    - ✅ LoRA fine-tuning on custom movie poster dataset
+    ### 🎯 Features
+    - ✅ Multi-agent architecture (7 specialized agents)
+    - ✅ Genre-specific LoRA fine-tuning
+    - ✅ Automatic genre detection from keywords
     - ✅ Sentiment analysis and semantic expansion
     - ✅ Aggressive text detection and removal
     - ✅ Denoising and super-resolution enhancement

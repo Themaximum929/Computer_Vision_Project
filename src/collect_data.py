@@ -1,4 +1,7 @@
 """Data collection script for poster dataset"""
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
 from src.scraper import PosterScraper
 
 def main():
@@ -9,7 +12,7 @@ def main():
     scraper = PosterScraper(output_dir="data/posters")
     
     # Get diverse movie IDs
-    movie_ids = scraper.get_top_movie_ids(count=50)
+    movie_ids = scraper.get_top_movie_ids(count=160)
     
     print(f"\nCollecting {len(movie_ids)} movie posters...")
     print("This will take approximately 1-2 minutes...\n")

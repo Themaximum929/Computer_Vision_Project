@@ -1,12 +1,19 @@
 """Script to train LoRA on scraped poster dataset"""
 import sys
+import argparse
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 from src.lora_trainer import LoRATrainer
 
 def main():
-    data_dir = "data/posters"
-    output_dir = "models/poster_lora"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data-dir", type=str, default="data/posters", help="Training data directory")
+    parser.add_argument("--output", type=str, default="models/poster_lora", help="Output directory")
+    parser.add_argument("--epochs", type=int, default=20, help="Training epochs")
+    args = parser.parse_args()
+    
+    data_dir = args.data_dir
+    output_dir = args.output
     
     # Check if data exists
     if not Path(data_dir).exists() or len(list(Path(data_dir).glob("*.jpg"))) == 0:
@@ -23,9 +30,9 @@ def main():
     trainer.train(
         data_dir=data_dir,
         output_dir=output_dir,
-        epochs=20,  # More epochs for stronger style transfer
+        epochs=args.epochs,
         batch_size=1,
-        lr=5e-5  # Higher LR for stronger adaptation
+        lr=5e-5
     )
     
     print("\nTraining complete!")
