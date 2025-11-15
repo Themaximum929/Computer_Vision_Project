@@ -1,21 +1,21 @@
 """Main Key2Poster Pipeline"""
 from src.concept_expander import ConceptExpander
 from src.visual_generator import VisualGenerator
-from src.no_text_generator import NoTextGenerator
 from src.evaluator import PosterEvaluator
 from src.refiner import QualityRefiner
 from src.super_resolution import SuperResolution
 from src.text_remover import TextRemover
 from src.aggressive_text_remover import AggressiveTextRemover
-from src.text_overlay import TextOverlay
+from src.artistic_text_overlay import ArtisticTextOverlay
 from src.genre_classifier import GenreClassifier
+from PIL import Image, ImageEnhance
 from pathlib import Path
 import time
 import os
 
 class Key2PosterPipeline:
     def __init__(self, lora_path=None, use_lora=False, remove_text=True, aggressive_text_removal=False, 
-                 no_text_mode=False, super_resolution=True, add_title=False, baseline_style=False, genre_lora=False):
+                 super_resolution=True, add_title=False, baseline_style=False, genre_lora=False):
         print("Initializing Key2Poster Pipeline...")
         print("Multi-Agent System (7 Agents):")
         print("  Agent 1: Concept Expander (Sentiment Analysis + Thematic Expansion)")
@@ -33,14 +33,11 @@ class Key2PosterPipeline:
         self.baseline_style = baseline_style
         self.use_lora = use_lora
         self.lora_path = lora_path
-        self.no_text_mode = no_text_mode
         
         # Generator will be created per-generation if genre_lora is enabled
         if not genre_lora:
             if baseline_style:
                 self.generator = VisualGenerator(lora_path=None, use_lora=False)
-            elif no_text_mode:
-                self.generator = NoTextGenerator(lora_path=lora_path, use_lora=use_lora)
             else:
                 self.generator = VisualGenerator(lora_path=lora_path, use_lora=use_lora)
         else:
@@ -52,7 +49,7 @@ class Key2PosterPipeline:
             self.text_remover = None
         self.refiner = QualityRefiner()
         self.super_res = SuperResolution() if super_resolution else None
-        self.text_overlay = TextOverlay() if add_title else None
+        self.text_overlay = ArtisticTextOverlay() if add_title else None
         self.evaluator = PosterEvaluator()
         self.remove_text = remove_text
         self.aggressive_text_removal = aggressive_text_removal
@@ -78,6 +75,7 @@ class Key2PosterPipeline:
         # Step 2: Classify genre and load appropriate LoRA
         if self.genre_lora and self.genre_classifier:
             genre = self.genre_classifier.classify(keywords)
+            self._current_genre = genre  # Store for text styling
             print(f"\n[2/7] Detected genre: {genre}")
             
             # Load genre-specific LoRA
@@ -106,9 +104,9 @@ class Key2PosterPipeline:
             else:
                 image, text_found = self.text_remover.remove_text(image)
             if text_found:
-                print("  ✓ Text detected and removed")
+                print("  [OK] Text detected and removed")
             else:
-                print("  ✓ No text detected")
+                print("  [OK] No text detected")
         else:
             print(f"\n[4/7] Text removal disabled - skipped")
         
@@ -119,7 +117,6 @@ class Key2PosterPipeline:
             image = self.refiner.enhance(image)
         else:
             print(f"\n[5/7] Basic enhancement (super-res disabled)...")
-            from PIL import ImageEnhance
             enhancer = ImageEnhance.Sharpness(image)
             image = enhancer.enhance(1.2)
             enhancer = ImageEnhance.Contrast(image)
@@ -128,7 +125,12 @@ class Key2PosterPipeline:
         # Step 6: Add title overlay (skip if disabled)
         if self.add_title and self.text_overlay:
             print(f"\n[6/7] Adding styled title...")
-            image = self.text_overlay.add_title(image, keywords, style="cinematic")
+            # Use genre for styling if available
+            if self.genre_lora and hasattr(self, '_current_genre'):
+                image = self.text_overlay.add_title(image, keywords, genre=self._current_genre)
+                print(f"  Applied {self._current_genre} style")
+            else:
+                image = self.text_overlay.add_title(image, keywords, style="cinematic")
         else:
             print(f"\n[6/7] Title overlay disabled - skipped")
         
@@ -143,19 +145,19 @@ class Key2PosterPipeline:
             metrics = self.evaluator.evaluate(output_path)
             print(f"  Aesthetic score: {metrics['aesthetic']['overall']:.3f}")
             print(f"  Resolution: {metrics['resolution']['width']}x{metrics['resolution']['height']}")
-            print(f"  Meets 720×1280 requirement: {metrics['instruction_following']}")
+            print(f"  Meets 720x1280 requirement: {metrics['instruction_following']}")
         
         elapsed = time.time() - start_time
-        print(f"\n✓ Poster saved to {output_path} ({elapsed:.1f}s)")
+        print(f"\n[OK] Poster saved to {output_path} ({elapsed:.1f}s)")
         print(f"\n=== AGENT WORKFLOW SUMMARY ===")
-        print(f"Agent 1 (Concept Expander): Keywords → Creative Brief")
+        print(f"Agent 1 (Concept Expander): Keywords -> Creative Brief")
         if self.genre_lora:
-            print(f"Agent 2 (Genre Classifier): Keywords → Genre Detection")
-        print(f"Agent 3 (Visual Designer): Brief → Raw Image")
-        print(f"Agent 4 (Text Remover): Raw Image → Text-Free Image")
-        print(f"Agent 5 (Quality Enhancer): Text-Free Image → Smooth Sharp Image")
-        print(f"Agent 6 (Text Overlay): Image → Image + Styled Title")
-        print(f"Agent 7 (Quality Evaluator): Final Image → Quality Metrics")
+            print(f"Agent 2 (Genre Classifier): Keywords -> Genre Detection")
+        print(f"Agent 3 (Visual Designer): Brief -> Raw Image")
+        print(f"Agent 4 (Text Remover): Raw Image -> Text-Free Image")
+        print(f"Agent 5 (Quality Enhancer): Text-Free Image -> Smooth Sharp Image")
+        print(f"Agent 6 (Text Overlay): Image -> Image + Styled Title")
+        print(f"Agent 7 (Quality Evaluator): Final Image -> Quality Metrics")
         
         return image, brief, metrics
     

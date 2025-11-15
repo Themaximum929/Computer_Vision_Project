@@ -18,6 +18,9 @@ class PosterScraper:
         posters = []
         metadata = []
         
+        # Get genre mapping from movie IDs
+        genre_map = self._get_genre_mapping()
+        
         for i, movie_id in enumerate(tqdm(movie_ids[:max_count], desc="Scraping posters")):
             try:
                 url = f"https://www.imdb.com/title/{movie_id}/"
@@ -32,21 +35,15 @@ class PosterScraper:
                     img = Image.open(BytesIO(img_response.content)).convert('RGB')
                     img = img.resize((512, 768), Image.Resampling.LANCZOS)
                     
-                    # Extract genres
-                    genres = []
-                    genre_tags = soup.find_all('a', class_='ipc-chip')
-                    for tag in genre_tags[:3]:  # Get top 3 genres
-                        genre_text = tag.get_text(strip=True)
-                        if genre_text and len(genre_text) < 20:
-                            genres.append(genre_text.lower())
+                    # Get genre from manual mapping
+                    genre = genre_map.get(movie_id, "general")
                     
                     # Save with genre prefix
-                    genre_str = "_".join(genres[:2]) if genres else "general"
-                    save_path = self.output_dir / f"{genre_str}_{movie_id}.jpg"
+                    save_path = self.output_dir / f"{genre}_{movie_id}.jpg"
                     img.save(save_path, quality=95)
                     
                     posters.append(str(save_path))
-                    metadata.append({"id": movie_id, "genres": genres, "path": str(save_path)})
+                    metadata.append({"id": movie_id, "genres": [genre], "path": str(save_path)})
                     
                 time.sleep(1)
             except Exception as e:
@@ -59,6 +56,73 @@ class PosterScraper:
         
         print(f"\nSuccessfully scraped {len(posters)} posters with genres")
         return posters, metadata
+    
+    def _get_genre_mapping(self):
+        """Map movie IDs to genres based on collection categories"""
+        genre_map = {}
+        
+        # Action/Adventure
+        action_ids = ["tt0468569", "tt0167260", "tt0120737", "tt0076759", "tt0133093", 
+                      "tt4154796", "tt2911666", "tt6751668", "tt4154756", "tt4574334",
+                      "tt0364989", "tt0117571", "tt0848228", "tt0398286", "tt0993846",
+                      "tt0206634", "tt0816692", "tt1877830", "tt0107290", "tt2906216"]
+        for mid in action_ids:
+            genre_map[mid] = "action"
+        
+        # Drama
+        drama_ids = ["tt0111161", "tt0068646", "tt0071562", "tt0108052", "tt0110912",
+                     "tt7286456", "tt5311514", "tt8079248", "tt0209144", "tt0109830",
+                     "tt0084649", "tt0118799", "tt0114369", "tt1291584", "tt0102926",
+                     "tt0120689", "tt0245712", "tt1049413", "tt0347149"]
+        for mid in drama_ids:
+            genre_map[mid] = "drama"
+        
+        # Horror/Thriller
+        horror_ids = ["tt0081505", "tt0078748", "tt0137523", "tt1457767", "tt1764234",
+                      "tt7798634", "tt6644200", "tt0360717", "tt0104057", "tt1870216",
+                      "tt0381681", "tt0208092", "tt2121382", "tt2294629", "tt0993846",
+                      "tt0083658", "tt0463854", "tt0105026"]
+        for mid in horror_ids:
+            genre_map[mid] = "horror"
+        
+        # Sci-Fi
+        scifi_ids = ["tt0080684", "tt1375666", "tt0088763", "tt2488496", "tt1825683",
+                     "tt2543164", "tt0437086", "tt0114709", "tt0116765", "tt0407304",
+                     "tt0119654", "tt1622547", "tt0090605", "tt0091251", "tt0816711"]
+        for mid in scifi_ids:
+            genre_map[mid] = "scifi"
+        
+        # Romance
+        romance_ids = ["tt0038650", "tt0110413", "tt0034583", "tt0043014", "tt0112573",
+                       "tt3783958", "tt2338151", "tt1838556", "tt1074638", "tt0120363",
+                       "tt0482571", "tt0167404", "tt0119346", "tt0480249", "tt0093058",
+                       "tt0091763", "tt0086879"]
+        for mid in romance_ids:
+            genre_map[mid] = "romance"
+        
+        # Comedy
+        comedy_ids = ["tt0050083", "tt0057012", "tt0105236", "tt0087843", "tt0095327",
+                      "tt11032374", "tt1987680", "tt2126355", "tt2283362", "tt8065792",
+                      "tt0095953", "tt0073195", "tt0100976", "tt0120815", "tt0114746"]
+        for mid in comedy_ids:
+            genre_map[mid] = "comedy"
+        
+        # Fantasy
+        fantasy_ids = ["tt0167261", "tt0245429", "tt0120815", "tt0361748", "tt3416828",
+                       "tt5013056", "tt2119532", "tt4633694", "tt1302006", "tt1130884",
+                       "tt0167264", "tt0120735", "tt0103064", "tt0317705", "tt0120903",
+                       "tt0112462", "tt0105121", "tt0248916", "tt0295297"]
+        for mid in fantasy_ids:
+            genre_map[mid] = "fantasy"
+        
+        # Anime
+        anime_ids = ["tt0119698", "tt2458948", "tt2397167", "tt6095088", "tt4925292",
+                     "tt0435761", "tt4834206", "tt2467690", "tt2250192", "tt0094625",
+                     "tt2414224", "tt0061722", "tt0423731", "tt0318871", "tt10648342"]
+        for mid in anime_ids:
+            genre_map[mid] = "anime"
+        
+        return genre_map
     
     def get_top_movie_ids(self, count=100):
         """Get diverse movie IDs across genres"""

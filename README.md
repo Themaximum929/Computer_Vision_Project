@@ -1,319 +1,182 @@
 # Key2Poster: Creative Poster Generator
 
-A multi-agent computer vision system that generates cinematic posters from keywords using Stable Diffusion.
+Generates professional product posters from 2-5 keywords using Stable Diffusion with LoRA fine-tuning.
 
-## 🚀 Quick Start (2 Steps)
+**Product Categories:** Food, Fashion, Electronics, Theme Parks, Beverages, Cosmetics, Travel
 
-### 1. Install Dependencies
+## Quick Start
+
 ```bash
 pip install -r requirements.txt
-```
-
-### 2. Launch Web Interface
-```bash
 python app_simple.py
 ```
-
-Then open: **http://localhost:7860**
-
-Enter keywords like "space exploration adventure" and click Generate!
+Open: **http://localhost:7860**
 
 ---
 
-## Project Overview
+## Complete Workflow
 
-**Input**: 2-5 keywords  
-**Output**: 720 × 1280 high-resolution poster  
-**Features**: Multi-agent system • Baseline style • Styled titles • Text removal • Denoising
-
-## Architecture
-
-### Multi-Agent System (6 Specialized Agents)
-1. **Concept Expander**: Keywords → Creative Brief (Sentiment Analysis + Thematic Expansion)
-2. **Visual Designer**: Brief → Poster Image (Stable Diffusion v1.5)
-3. **Text Remover**: Image → Text-Free Image (Aggressive multi-method detection)
-4. **Quality Enhancer**: Image → Enhanced Image (Denoising + Super-Resolution)
-5. **Text Overlay**: Image → Image + Styled Title (Cinematic styling)
-6. **Quality Evaluator**: Image → Quality Metrics (Aesthetic + Resolution validation)
-
-## Usage Options
-
-### Option 1: Web Interface (Recommended) 🌐
-
+### 1. Collect Posters
 ```bash
-# Simple interface (best for demos)
-python app_simple.py
+python src/collect_data.py
+```
+Scrapes movie posters from IMDB with genre labels → `data/posters/`
 
-# Full interface (all options)
-python app.py
+### 2. Preprocess (Remove Text)
+```bash
+python preprocess_training_data.py
+```
+Removes text from posters before training → `data/posters_clean/`
+
+### 3. Train LoRA
+```bash
+python src/train_lora.py --data-dir data/posters_clean
+```
+Trains genre-specific LoRA models → `models/`
+
+### 4. Generate Posters
+```bash
+python run_pipeline.py "space exploration adventure" --genre-lora --add-title
+```
+Generates poster with genre-matched styling → `outputs/`
+
+---
+
+## Multi-Agent System (7 Agents)
+
+1. **Concept Expander** - Sentiment analysis + thematic expansion
+2. **Genre Classifier** - Auto-detect genre from keywords
+3. **Visual Designer** - Stable Diffusion v1.5 + genre-specific LoRA
+4. **Text Remover** - Aggressive multi-method text detection
+5. **Quality Enhancer** - Denoising + super-resolution
+6. **Text Overlay** - Genre-matched styled titles (9 styles)
+7. **Quality Evaluator** - Aesthetic scoring + validation
+
+---
+
+## Usage
+
+### Web Interface
+```bash
+python app_simple.py  # Simple UI
+python app.py         # Full options
 ```
 
-Access at **http://localhost:7860**
-
-**Features:**
-- 🎨 Interactive web UI
-- ⚙️ All pipeline options
-- 📊 Real-time metrics
-- 🔄 Reproducible with seeds
-- 📱 Mobile-friendly
-
-### Option 2: Command Line
-
+### Command Line
 ```bash
-# Generate poster with best settings
-python run_pipeline.py "space exploration adventure"
+# Basic generation
+python run_pipeline.py "dark horror mansion"
 
-# With all enhancements
-python run_pipeline.py "dark fantasy warrior" --baseline-style --add-title --aggressive-text-removal
+# With genre detection + styled text
+python run_pipeline.py "space adventure" --genre-lora --add-title
 
 # With seed for reproducibility
 python run_pipeline.py "cyberpunk city" --seed 42
 ```
 
-### Option 3: Python Script
-
+### Python API
 ```python
 from src.pipeline import Key2PosterPipeline
 
-# Initialize with best settings
 pipeline = Key2PosterPipeline(
-    baseline_style=True,      # Vibrant colors
-    add_title=True,           # Styled movie title
+    genre_lora=True,              # Auto-detect genre
+    add_title=True,               # Add styled title
     aggressive_text_removal=True,
     super_resolution=True
 )
 
-# Generate poster
 image, brief, metrics = pipeline.generate_poster(
     "space exploration adventure",
-    output_path="my_poster.png",
+    output_path="poster.png",
     seed=42
 )
 ```
 
+---
+
+## Text Styling (9 Genre Styles)
+
+| Genre | Color | Effect |
+|-------|-------|--------|
+| Action | Red | Bold, heavy stroke |
+| Horror | Dark Red | Large shadow, centered |
+| Sci-Fi | Cyan | Glowing, wide spacing |
+| Drama | White | Elegant, subtle |
+| Comedy | Yellow | Playful |
+| Thriller | White | Dark shadow |
+| Fantasy | Gold | Magical |
+| Romance | Pink | Soft, delicate |
+| Cinematic | White | Professional |
+
+Test all styles:
+```bash
+python test_text_styles.py
+```
+
+---
+
 ## Project Structure
+
 ```
 ├── src/
-│   ├── concept_expander.py   # Semantic expansion agent
-│   ├── visual_generator.py   # SD + LoRA generator
-│   ├── scraper.py            # Poster data scraper
-│   ├── lora_trainer.py       # LoRA fine-tuning
-│   ├── pipeline.py           # Main pipeline
-│   └── evaluator.py          # Quality metrics
-├── data/                     # Scraped poster datasets
-├── models/                   # Trained LoRA weights
-├── outputs/                  # Generated posters
-└── notebooks/                # Experiments & analysis
-
+│   ├── pipeline.py              # Main orchestrator
+│   ├── concept_expander.py      # Agent 1
+│   ├── genre_classifier.py      # Agent 2
+│   ├── visual_generator.py      # Agent 3
+│   ├── aggressive_text_remover.py # Agent 4
+│   ├── refiner.py               # Agent 5
+│   ├── text_overlay.py          # Agent 6
+│   ├── evaluator.py             # Agent 7
+│   ├── poster_text_styles.py    # Style definitions
+│   ├── scraper.py               # Data collection
+│   └── lora_trainer.py          # LoRA training
+├── preprocess_training_data.py  # Text removal preprocessing
+├── app_simple.py                # Web UI
+├── run_pipeline.py              # CLI tool
+└── test_text_styles.py          # Style testing
 ```
 
-## Grading Target: Level 2-3 (70-90)
+---
 
-### Level 2 Achievements (70-80)
-- ✅ Baseline SD implementation
-- ✅ LoRA fine-tuning on custom dataset
-- ✅ Web scraping for data collection
-- ✅ Controlled comparison baseline vs LoRA
+## Key Features
 
-### Level 3 Potential (80-90)
-- Multi-agent architecture (novel combination)
-- Semantic expansion with sentiment analysis
-- Comprehensive evaluation metrics
-- Ablation studies on agent contributions
-
-## 📊 Performance
-
-| Hardware | Generation Time |
-|----------|----------------|
-| GPU (RTX 3090) | ~10-15 seconds |
-| GPU (RTX 2060) | ~15-20 seconds |
-| CPU | ~2-3 minutes |
-
-**Tips for faster generation:**
-- Disable text removal
-- Disable super-resolution
-- Use simple interface (pre-loaded pipeline)
-
-## 🔧 Troubleshooting
-
-**"Module not found" error:**
-```bash
-pip install -r requirements.txt
-```
-
-**Slow generation:**
-- Use GPU with CUDA (10x faster)
-- Disable text removal and super-resolution
-
-**Port 7860 already in use:**
-```bash
-python app_simple.py --server-port 7861
-```
-
-## 📖 Documentation
-
-- **[HOW_TO_RUN.md](HOW_TO_RUN.md)** - Complete setup guide for colleagues ⭐
-- **[PIPELINE_GUIDE.md](PIPELINE_GUIDE.md)** - Detailed technical guide
-- **[GRADIO_GUIDE.md](GRADIO_GUIDE.md)** - Web interface documentation
-- **[FINAL_IMPROVEMENTS.md](FINAL_IMPROVEMENTS.md)** - Recent updates and fixes
-
-## 🎯 Complete Pipeline
-
-### Automated Execution
-```bash
-python run_full_pipeline.py --test-mode
-```
-
-### Manual Step-by-Step
-```bash
-# Step 1: Test setup
-python test_pipeline.py
-
-# Step 2: Collect data
-python src/collect_data.py
-
-# Step 3: Train LoRA
-python src/train_lora.py
-
-# Step 4: Generate posters
-python run_pipeline.py "your keywords" --lora
-
-# Step 5: Run comparison
-python src/experiment.py
-```
-
-## 💡 Examples
-
-### Example 1: Quick Demo
-```bash
-python app_simple.py
-# Enter: "space exploration adventure"
-# Result: Vibrant poster with styled title in ~15 seconds
-```
-
-### Example 2: Custom Poster
-```bash
-python run_pipeline.py "dark fantasy warrior" --baseline-style --add-title --seed 42
-```
-
-### Example 3: Batch Generation
-```python
-from src.pipeline import Key2PosterPipeline
-
-pipeline = Key2PosterPipeline(baseline_style=True, add_title=True)
-keywords = ["space adventure", "dark fantasy", "cyberpunk city"]
-results = pipeline.batch_generate(keywords)
-```
-
-## 🏗️ Pipeline Flow
-
-```
-Keywords → [Agent 1: Concept Expander] → Creative Brief
-              ↓
-         [Agent 2: Visual Designer] → Raw Image
-              ↓
-         [Agent 3: Text Remover] → Text-Free Image
-              ↓
-         [Agent 4: Quality Enhancer] → Smooth Sharp Image
-              ↓
-         [Agent 5: Text Overlay] → Image + Styled Title
-              ↓
-         [Agent 6: Quality Evaluator] → Final Poster + Metrics
-```
-
-**Agent 1:** Sentiment analysis + thematic expansion  
-**Agent 2:** Stable Diffusion v1.5 (baseline or LoRA)  
-**Agent 3:** Aggressive text detection + removal  
-**Agent 4:** Denoising + super-resolution + sharpening  
-**Agent 5:** Cinematic title overlay  
-**Agent 6:** Aesthetic scoring + resolution validation
-
-## 📊 Results
-
-**Output:**
-- Resolution: 720×1280 pixels
-- Format: PNG (high quality)
-- Style: Vibrant baseline or cinematic LoRA
-- Features: Smooth, sharp, text-free, with styled title
-
-**Quality:**
-- Aesthetic Score: 0.5-0.7
-- No graininess (denoised)
-- No artificial text (removed)
-- Professional movie poster look
-
-## 🎓 Features
-
-✅ **Multi-Agent System** - 6 specialized agents  
-✅ **Baseline Style** - Vibrant, aesthetic colors  
-✅ **LoRA Fine-tuning** - Optional cinematic style  
-✅ **Styled Title Overlay** - Cinematic movie titles  
-✅ **Aggressive Text Removal** - Removes artificial words  
-✅ **Denoising** - Smooth, professional quality  
-✅ **Super-Resolution** - Sharp details  
+✅ **Genre-Specific LoRA** - Trained on genre-labeled posters  
+✅ **Automatic Genre Detection** - Matches style to content  
+✅ **Text Preprocessing** - Clean training data  
+✅ **9 Text Styles** - Genre-matched typography  
+✅ **Aggressive Text Removal** - 3-pass detection  
+✅ **Quality Enhancement** - Denoising + super-resolution  
 ✅ **Web Interface** - Easy to use Gradio UI  
-✅ **Reproducible** - Seed-based generation  
-✅ **Comprehensive Metrics** - Quality evaluation
+✅ **Reproducible** - Seed-based generation
 
-## 🛠️ Scripts
+---
 
-| Script | Purpose |
-|--------|----------|
-| `app_simple.py` | **Web interface (recommended)** ⭐ |
-| `app.py` | Web interface (full options) |
-| `run_pipeline.py` | CLI poster generation |
-| `test_pipeline.py` | Test all components |
-| `clean_training_data.py` | Remove text from training data |
-| `src/train_lora.py` | Train LoRA model (optional) |
+## Documentation
 
-## 📁 Project Structure
+- **PREPROCESSING_GUIDE.md** - Text removal & styling guide
+- **QUICK_REFERENCE.md** - Command reference
+- **requirements.txt** - Dependencies
 
-```
-Computer_Vision_Project/
-├── app_simple.py             # Simple web interface ⭐
-├── app.py                    # Full web interface
-├── run_pipeline.py           # CLI tool
-├── src/
-│   ├── pipeline.py           # Main orchestrator
-│   ├── concept_expander.py   # Agent 1: Semantic expansion
-│   ├── visual_generator.py   # Agent 2: Image generation
-│   ├── text_remover.py       # Agent 3: Text removal
-│   ├── refiner.py            # Agent 4: Quality enhancement
-│   ├── text_overlay.py       # Agent 5: Title overlay
-│   └── evaluator.py          # Agent 6: Quality metrics
-├── outputs/                  # Generated posters
-└── HOW_TO_RUN.md            # Setup guide for colleagues
-```
+---
 
-## 🎯 Best Settings
+## Performance
 
-**For best quality:**
-- Baseline Style: ✓
-- Title Overlay: ✓
-- Aggressive Text Removal: ✓
-- Super-Resolution: ✓
+| Hardware | Time |
+|----------|------|
+| GPU (RTX 3090) | ~10-15s |
+| GPU (RTX 2060) | ~15-20s |
+| CPU | ~2-3min |
 
-**For speed:**
-- Baseline Style: ✓
-- Title Overlay: ✓
-- Text Removal: ✗
-- Super-Resolution: ✗
+---
 
-## 📚 Additional Resources
+## Summary
 
-- **HOW_TO_RUN.md** - Complete setup guide
-- **GRADIO_GUIDE.md** - Web interface documentation
-- **FINAL_IMPROVEMENTS.md** - Recent fixes (graininess, text removal, styling)
-- **QUALITY_IMPROVEMENTS.md** - Quality enhancement details
-
-## 🎉 Summary
-
-**Quickest way to start:**
 ```bash
-pip install -r requirements.txt
-python app_simple.py
-# Open http://localhost:7860
-# Enter keywords and generate!
+# Complete workflow
+python src/collect_data.py                    # Collect posters
+python preprocess_training_data.py            # Remove text
+python src/train_lora.py --data-dir data/posters_clean  # Train
+python run_pipeline.py "keywords" --genre-lora --add-title  # Generate
 ```
 
-**Enjoy creating cinematic posters!** 🎨
+**Result:** Professional posters with genre-matched styling! 🎨

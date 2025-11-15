@@ -1,6 +1,7 @@
 """Visual Design Agent - Generates poster using Stable Diffusion + LoRA"""
 import torch
 from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler
+from PIL import Image
 import os
 
 class VisualGenerator:
@@ -35,32 +36,26 @@ class VisualGenerator:
         if seed is not None:
             generator = generator.manual_seed(seed)
         
-        # VERY strong negative prompt - absolutely no text
+        # Enhanced prompt for movie poster style
+        enhanced_prompt = f"cinematic movie poster, {prompt}, dramatic lighting, professional photography, high quality, detailed, epic composition, vibrant colors"
+        
+        # Strong negative prompt
         negative_prompt = (
             "text, words, letters, typography, font, title, subtitle, caption, label, "
             "watermark, logo, signature, writing, alphabet, characters, numbers, digits, "
             "symbols, signs, banner, headline, tagline, slogan, credits, names, "
             "readable text, written words, printed text, handwriting, calligraphy, "
-            "oversaturated, neon colors, artificial colors, digital art, 3d render, "
-            "blurry, low quality, distorted, deformed, ugly, bad anatomy"
+            "blurry, low quality, distorted, deformed, ugly, bad anatomy, amateur"
         )
         
-        # Generate at slightly higher resolution for better quality
-        gen_width = int(width * 1.1)
-        gen_height = int(height * 1.1)
-        
         image = self.pipe(
-            prompt,
+            enhanced_prompt,
             negative_prompt=negative_prompt,
-            width=gen_width,
-            height=gen_height,
+            width=width,
+            height=height,
             num_inference_steps=num_inference_steps,
-            guidance_scale=9.5,
+            guidance_scale=8.5,
             generator=generator
         ).images[0]
-        
-        # Downscale to target (improves sharpness)
-        if image.size != (width, height):
-            image = image.resize((width, height), Image.Resampling.LANCZOS)
         
         return image
