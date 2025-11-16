@@ -1,0 +1,130 @@
+INTELLIGENT FONT SELECTION SYSTEM
+
+FONT CATEGORIES:
+================
+
+1. SERIF FONTS (times, georgia, garamond, baskerville, palatino)
+   - Use for: Epic, Dramatic, Historical genres
+   - Characteristics: Traditional, elegant, authoritative
+   - Best for: Period pieces, dramas, romance, fantasy
+
+2. SANS-SERIF FONTS (arial, helvetica, futura, roboto, montserrat)
+   - Use for: Sci-Fi, Modern, Minimalist styles
+   - Characteristics: Clean, contemporary, readable
+   - Best for: Tech, future, urban, thriller
+
+3. DISPLAY FONTS (impact, bebas, oswald, anton, bangers)
+   - Use for: Action, Bold statements
+   - Characteristics: High impact, attention-grabbing
+   - Best for: Action, sports, intense themes
+
+4. DECORATIVE FONTS (comic, papyrus, brush, script, gothic)
+   - Use for: Horror, Carnival, Fantasy, Unique themes
+   - Characteristics: Stylized, thematic, artistic
+   - Best for: Horror, comedy, whimsical, artistic
+
+GENRE → FONT CATEGORY MAPPING:
+===============================
+
+Action       → Display (fallback: Sans-Serif) + Bold
+Horror       → Decorative (fallback: Display) + Bold
+Sci-Fi       → Sans-Serif (fallback: Sans-Serif)
+Drama        → Serif (fallback: Serif)
+Comedy       → Decorative (fallback: Sans-Serif)
+Thriller     → Sans-Serif (fallback: Serif) + Bold
+Fantasy      → Decorative (fallback: Serif)
+Romance      → Serif (fallback: Sans-Serif)
+Epic         → Serif (fallback: Serif) + Bold
+Historical   → Serif (fallback: Serif)
+Modern       → Sans-Serif (fallback: Sans-Serif)
+Minimalist   → Sans-Serif (fallback: Sans-Serif)
+Cinematic    → Sans-Serif (fallback: Serif) + Bold
+
+READABILITY RULES:
+==================
+
+1. AUTOMATIC EFFECT ADJUSTMENT:
+   - Dark backgrounds: Lower stroke/shadow for clarity
+   - Bright backgrounds: Higher stroke/shadow for contrast
+   - Bold genres: Increased stroke width
+   - Subtle genres: Reduced effects
+
+2. STROKE WIDTH:
+   - Bold genres on dark: 2px
+   - Bold genres on bright: 3px
+   - Subtle genres on dark: 1px
+   - Subtle genres on bright: 2px
+
+3. SHADOW OFFSET:
+   - Bold genres on dark: 4px
+   - Bold genres on bright: 6px
+   - Subtle genres on dark: 3px
+   - Subtle genres on bright: 4px
+
+4. COLOR HARMONY:
+   - System analyzes background brightness
+   - Adjusts text color for optimal contrast
+   - Maintains genre-specific color themes
+   - Darkens colors on bright backgrounds
+
+FONT MIXING HIERARCHY:
+======================
+
+Primary Title: Display/Serif (genre-dependent)
+Subtitle: Sans-Serif (complementary)
+Tagline: Serif (if primary is sans) or Sans (if primary is serif)
+
+Example Combinations:
+- Epic: Serif title + Sans-Serif subtitle
+- Sci-Fi: Sans-Serif title + Serif subtitle
+- Horror: Decorative title + Display subtitle
+- Drama: Serif title + Sans-Serif subtitle
+
+USAGE EXAMPLES:
+===============
+
+1. EPIC HISTORICAL DRAMA:
+   Genre: "epic" or "historical"
+   → Selects: Serif font (times, georgia)
+   → Effects: Bold stroke, moderate shadow
+   → Color: Adapts to background
+
+2. MODERN SCI-FI THRILLER:
+   Genre: "scifi" or "modern"
+   → Selects: Sans-Serif font (arial, helvetica)
+   → Effects: Clean stroke, subtle shadow
+   → Color: High contrast
+
+3. HORROR SUPERNATURAL:
+   Genre: "horror"
+   → Selects: Decorative font (gothic, brush)
+   → Effects: Heavy stroke, large shadow
+   → Color: Dark, ominous tones
+
+4. ROMANTIC PERIOD PIECE:
+   Genre: "romance"
+   → Selects: Serif font (times, garamond)
+   → Effects: Subtle stroke, soft shadow
+   → Color: Warm, elegant tones
+
+BEST PRACTICES:
+===============
+
+✓ Always enable auto_adapt for optimal results
+✓ Let the system choose font category based on genre
+✓ Override only when specific artistic vision required
+✓ Test readability at different sizes
+✓ Ensure sufficient contrast with background
+✓ Use letter spacing for cinematic feel
+✓ Position text in safe zones (avoid edges)
+✓ Apply effects that complement font choice
+
+MANUAL OVERRIDE:
+================
+
+When auto-selection doesn't fit:
+1. Choose font category manually
+2. Select specific font from dropdown
+3. Adjust effects for readability
+4. Test on actual poster background
+5. Verify text stays within bounds

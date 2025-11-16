@@ -1,0 +1,173 @@
+CINEMATIC TEXT OVERLAY - INTEGRATION TESTING GUIDE
+
+OPTION 1: TEST WITH EXISTING POSTERS
+=====================================
+
+If you already have generated posters in outputs/:
+
+1. Run integration test:
+   python test_poster_integration.py
+
+   This will:
+   - Find existing posters in outputs/
+   - Apply 5 different genre styles
+   - Test font categorization
+   - Save results to outputs/integration_test/
+
+2. Check results:
+   - Open outputs/integration_test/
+   - Compare different genre styles
+   - Verify text is readable and well-positioned
+
+OPTION 2: QUICK TEST (NO POSTERS NEEDED)
+=========================================
+
+If you don't have posters yet:
+
+1. Run quick test:
+   python test_poster_integration.py --quick
+
+   This will:
+   - Create a synthetic gradient poster
+   - Apply all genre styles
+   - Test font system
+   - Save to outputs/integration_test/
+
+2. Results:
+   - quick_action.png
+   - quick_horror.png
+   - quick_scifi.png
+   - quick_drama.png
+   - quick_epic.png
+
+OPTION 3: FULL PIPELINE TEST
+=============================
+
+Test the complete poster generation + text overlay:
+
+1. Generate poster with text overlay:
+   python run_pipeline.py "space adventure" --genre-lora --add-title --seed 42
+
+2. The pipeline will:
+   - Generate base poster
+   - Auto-detect genre
+   - Apply appropriate text style
+   - Save final result
+
+3. Check output in outputs/
+
+OPTION 4: INTERACTIVE UI TEST
+==============================
+
+Test with live preview and customization:
+
+1. Launch text overlay UI:
+   python app_text_overlay.py
+
+2. In the UI:
+   - Click "Load Sample Poster" (loads from outputs/)
+   - Or upload your own poster
+   - Enter title text
+   - Select genre
+   - Adjust settings in real-time
+   - See live preview
+
+3. Features to test:
+   ✓ Auto-adapt colors (toggle on/off)
+   ✓ Genre selection (12 genres)
+   ✓ Font category (serif/sans-serif/display/decorative)
+   ✓ Manual font selection
+   ✓ Font size slider
+   ✓ Color RGB sliders
+   ✓ Position (top/center/bottom)
+   ✓ Stroke width
+   ✓ Shadow offset
+   ✓ Letter spacing
+
+WHAT TO VERIFY:
+===============
+
+✓ Font Selection:
+  - Epic/Drama → Serif fonts
+  - Sci-Fi/Modern → Sans-Serif fonts
+  - Action → Display fonts
+  - Horror/Fantasy → Decorative fonts
+
+✓ Color Adaptation:
+  - Dark backgrounds → Bright text
+  - Bright backgrounds → Dark text
+  - Genre colors applied correctly
+
+✓ Readability:
+  - Text has appropriate stroke
+  - Shadow provides depth
+  - Text stays within bounds
+  - No clipping at edges
+
+✓ Effects:
+  - Bold genres have heavier effects
+  - Subtle genres have lighter effects
+  - Effects scale with background brightness
+
+TROUBLESHOOTING:
+================
+
+Issue: "No posters found"
+Solution: Generate a poster first:
+  python run_pipeline.py "dark fantasy" --genre-lora --seed 123
+
+Issue: "No fonts found"
+Solution: 
+  - Add .ttf or .otf fonts to fonts/cinematic/
+  - System will fallback to system fonts if none found
+
+Issue: Text not visible
+Solution:
+  - Enable auto_adapt=True
+  - Increase stroke_width
+  - Increase shadow_offset
+  - Try different position
+
+Issue: Font not loading
+Solution:
+  - Check font file is .ttf or .otf
+  - Verify file is in fonts/cinematic/
+  - Check file permissions
+  - Try system fonts (arial, times, impact)
+
+EXPECTED OUTPUT:
+================
+
+Integration test should show:
+- 5 different genre styles applied
+- Font category for each genre
+- List of available fonts
+- Font categorization summary
+- All tests passing with ✓
+
+Files created in outputs/integration_test/:
+- test_0_epic.png
+- test_1_horror.png
+- test_2_scifi.png
+- test_3_romance.png
+- test_4_action.png
+
+PERFORMANCE:
+============
+
+Expected timing:
+- Integration test: ~2-5 seconds
+- Quick test: ~1-2 seconds
+- UI launch: ~3-5 seconds
+- Live preview update: <0.5 seconds
+
+NEXT STEPS:
+===========
+
+After successful integration test:
+
+1. Generate posters with different genres
+2. Test all 12 genre presets
+3. Add custom fonts to fonts/cinematic/
+4. Experiment with manual customization
+5. Create production posters with optimal settings

@@ -1,0 +1,117 @@
+CINEMATIC TEXT OVERLAY PIPELINE - QUICK START GUIDE
+
+FEATURES:
+=========
+✓ Automatic font selection based on genre
+✓ Adaptive color picking based on background analysis
+✓ Live preview with real-time updates
+✓ Full manual customization (font, size, color, position, effects)
+✓ Text boundary handling to keep text inside poster
+✓ 9 genre-specific presets (action, horror, scifi, drama, comedy, thriller, fantasy, romance, cinematic)
+
+SETUP:
+======
+1. Place your .ttf fonts in: fonts/cinematic/
+2. System will auto-detect fonts or fallback to system fonts
+
+USAGE:
+======
+
+1. RUN TEST SUITE:
+   python test_cinematic_overlay.py
+   
+   This will generate test posters in outputs/test_overlays/ showing:
+   - Auto-adaptation to bright/dark backgrounds
+   - Manual customization examples
+   - All genre styles
+   - Text boundary handling
+   - Real poster overlay (if available)
+
+2. LAUNCH GRADIO UI:
+   python app_text_overlay.py
+   
+   Then open: http://localhost:7860
+   
+   UI Features:
+   - Upload any poster image
+   - Enter title text
+   - Auto-adapt colors based on background (toggle on/off)
+   - Select genre for automatic styling
+   - Choose font from available fonts
+   - Adjust font size, letter spacing
+   - Customize RGB color values
+   - Set position (top/center/bottom)
+   - Control stroke width and shadow offset
+   - LIVE PREVIEW updates as you change settings
+
+3. PYTHON API:
+   from src.cinematic_text_overlay import CinematicTextOverlay
+   from PIL import Image
+   
+   overlay = CinematicTextOverlay()
+   image = Image.open("poster.png")
+   
+   # Auto mode (recommended)
+   result = overlay.add_text(image, "EPIC MOVIE", genre="action", auto_adapt=True)
+   
+   # Manual mode
+   result = overlay.add_text(
+       image, "CUSTOM TITLE",
+       font_size=100,
+       color=(255, 0, 0),
+       position="center",
+       stroke_width=3,
+       shadow_offset=5,
+       letter_spacing=8,
+       auto_adapt=False
+   )
+   
+   result.save("output.png")
+
+GENRE PRESETS:
+==============
+- action: Red, bold, impact font
+- horror: Dark red, centered, large shadow
+- scifi: Cyan, wide spacing, modern
+- drama: White, elegant, subtle
+- comedy: Yellow, playful
+- thriller: White, dark shadow
+- fantasy: Gold, magical
+- romance: Pink, soft, delicate
+- cinematic: White, professional (default)
+
+BACKGROUND ANALYSIS:
+====================
+The system automatically:
+1. Analyzes the background color in the text region
+2. Calculates average brightness
+3. Adjusts text color for optimal contrast
+4. Selects appropriate font based on genre
+
+TEXT BOUNDARY HANDLING:
+=======================
+- Automatically calculates safe margins (5% of width)
+- Centers text horizontally with bounds checking
+- Positions vertically based on selection (top/center/bottom)
+- Ensures text never clips outside poster edges
+
+CUSTOMIZATION OPTIONS:
+======================
+- font_path: Path to .ttf font file
+- font_size: Size in pixels (default: 8% of image height)
+- color: RGB tuple (255, 255, 255)
+- position: "top", "center", or "bottom"
+- stroke_width: Outline thickness (0-10)
+- shadow_offset: Shadow distance (0-20)
+- letter_spacing: Space between letters (0-20)
+- genre: Genre preset name
+- auto_adapt: Enable/disable automatic color adaptation
+
+TIPS:
+=====
+- Use auto_adapt=True for best results
+- Dark backgrounds work best with bright colors
+- Increase stroke_width for bold action titles
+- Increase shadow_offset for dramatic effect
+- Use letter_spacing for cinematic look
+- Test with different genres to find best style

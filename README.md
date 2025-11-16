@@ -58,8 +58,10 @@ Generates poster with genre-matched styling → `outputs/`
 
 ### Web Interface
 ```bash
-python app_simple.py  # Simple UI
-python app.py         # Full options
+python app_simple.py   # Simple UI
+python app.py          # Full options
+python app_enhanced.py # Enhanced with templates & color extraction
+python app_unified.py  # Unified pipeline (RECOMMENDED)
 ```
 
 ### Command Line
@@ -147,7 +149,11 @@ python test_text_styles.py
 ✅ **Aggressive Text Removal** - 3-pass detection  
 ✅ **Quality Enhancement** - Denoising + super-resolution  
 ✅ **Web Interface** - Easy to use Gradio UI  
-✅ **Reproducible** - Seed-based generation
+✅ **Reproducible** - Seed-based generation  
+🆕 **Template System** - 4 professional layouts  
+🆕 **Color Extraction** - Smart palette analysis  
+🆕 **Composition Engine** - Intelligent element placement  
+🆕 **Vignette Effects** - Professional focus enhancement
 
 ---
 

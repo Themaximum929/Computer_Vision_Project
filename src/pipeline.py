@@ -6,7 +6,9 @@ from src.refiner import QualityRefiner
 from src.super_resolution import SuperResolution
 from src.text_remover import TextRemover
 from src.aggressive_text_remover import AggressiveTextRemover
-from src.artistic_text_overlay import ArtisticTextOverlay
+from src.cinematic_text_overlay import CinematicTextOverlay
+from src.movie_poster_designer import MoviePosterDesigner
+from src.poster_composer import PosterComposer
 from src.genre_classifier import GenreClassifier
 from PIL import Image, ImageEnhance
 from pathlib import Path
@@ -15,7 +17,8 @@ import os
 
 class Key2PosterPipeline:
     def __init__(self, lora_path=None, use_lora=False, remove_text=True, aggressive_text_removal=False, 
-                 super_resolution=True, add_title=False, baseline_style=False, genre_lora=False):
+                 super_resolution=True, add_title=False, baseline_style=False, genre_lora=False, 
+                 use_template=False, template_path=None):
         print("Initializing Key2Poster Pipeline...")
         print("Multi-Agent System (7 Agents):")
         print("  Agent 1: Concept Expander (Sentiment Analysis + Thematic Expansion)")
@@ -49,7 +52,11 @@ class Key2PosterPipeline:
             self.text_remover = None
         self.refiner = QualityRefiner()
         self.super_res = SuperResolution() if super_resolution else None
-        self.text_overlay = ArtisticTextOverlay() if add_title else None
+        self.text_overlay = CinematicTextOverlay() if add_title else None
+        self.poster_designer = MoviePosterDesigner() if add_title else None
+        self.poster_composer = PosterComposer() if use_template else None
+        self.use_template = use_template
+        self.template_path = template_path
         self.evaluator = PosterEvaluator()
         self.remove_text = remove_text
         self.aggressive_text_removal = aggressive_text_removal
@@ -122,17 +129,34 @@ class Key2PosterPipeline:
             enhancer = ImageEnhance.Contrast(image)
             image = enhancer.enhance(1.1)
         
-        # Step 6: Add title overlay (skip if disabled)
-        if self.add_title and self.text_overlay:
-            print(f"\n[6/7] Adding styled title...")
-            # Use genre for styling if available
-            if self.genre_lora and hasattr(self, '_current_genre'):
-                image = self.text_overlay.add_title(image, keywords, genre=self._current_genre)
-                print(f"  Applied {self._current_genre} style")
+        # Step 5.5: Compose with template (if enabled)
+        if self.use_template and self.poster_composer:
+            print(f"\n[5.5/7] Composing with poster template...")
+            if self.template_path:
+                image = self.poster_composer.compose_poster(self.template_path, image)
             else:
-                image = self.text_overlay.add_title(image, keywords, style="cinematic")
+                image = self.poster_composer.compose_with_simple_layout(image)
+            print(f"  ✓ Poster composed with template layout")
+        
+        # Step 6: Add movie poster design (skip if disabled)
+        if self.add_title and self.poster_designer and not self.use_template:
+            print(f"\n[6/7] Adding movie poster design...")
+            # Use genre for styling if available
+            if hasattr(self, '_current_genre'):
+                genre = self._current_genre
+            else:
+                genre = "cinematic"
+            
+            image = self.poster_designer.add_movie_poster_elements(
+                image, keywords, genre, keywords
+            )
+            print(f"  ✓ Title: {keywords.upper()}")
+            print(f"  ✓ Tagline generated")
+            print(f"  ✓ Cast & crew added")
+            print(f"  ✓ Release date added")
+            print(f"  ✓ Rating: {self.poster_designer.get_rating(genre)}")
         else:
-            print(f"\n[6/7] Title overlay disabled - skipped")
+            print(f"\n[6/7] Movie poster design disabled - skipped")
         
         # Step 6: Save output
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
@@ -156,6 +180,8 @@ class Key2PosterPipeline:
         print(f"Agent 3 (Visual Designer): Brief -> Raw Image")
         print(f"Agent 4 (Text Remover): Raw Image -> Text-Free Image")
         print(f"Agent 5 (Quality Enhancer): Text-Free Image -> Smooth Sharp Image")
+        if self.use_template:
+            print(f"Agent 5.5 (Poster Composer): Image -> Template Composition")
         print(f"Agent 6 (Text Overlay): Image -> Image + Styled Title")
         print(f"Agent 7 (Quality Evaluator): Final Image -> Quality Metrics")
         
