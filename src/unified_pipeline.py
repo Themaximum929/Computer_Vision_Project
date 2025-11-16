@@ -140,6 +140,11 @@ class UnifiedPosterPipeline:
     def _add_smart_text(self, image, text, genre, accent_color, safe_zone):
         """Add text with PosterCraft-style aesthetic design"""
         from src.aesthetic_text_overlay import AestheticTextOverlay
+        from src.title_generator import TitleGenerator
+        
+        # Generate simple title
+        title_gen = TitleGenerator()
+        simple_title = title_gen.generate(text, genre)
         
         overlay = AestheticTextOverlay()
         
@@ -157,7 +162,7 @@ class UnifiedPosterPipeline:
         
         return overlay.add_poster_text(
             image=image,
-            title=text,
+            title=simple_title,
             genre=genre,
             tagline=tagline,
             credits=None
