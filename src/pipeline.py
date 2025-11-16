@@ -7,8 +7,7 @@ from src.refiner import QualityRefiner
 from src.super_resolution import SuperResolution
 from src.text_remover import TextRemover
 from src.aggressive_text_remover import AggressiveTextRemover
-from src.cinematic_text_overlay import CinematicTextOverlay
-from src.movie_poster_designer import MoviePosterDesigner
+from src.aesthetic_text_overlay import AestheticTextOverlay
 from src.poster_composer import PosterComposer
 from src.genre_classifier import GenreClassifier
 from PIL import Image, ImageEnhance
@@ -58,8 +57,7 @@ class Key2PosterPipeline:
             self.text_remover = None
         self.refiner = QualityRefiner()
         self.super_res = SuperResolution() if super_resolution else None
-        self.text_overlay = CinematicTextOverlay() if add_title else None
-        self.poster_designer = MoviePosterDesigner() if add_title else None
+        self.text_overlay = AestheticTextOverlay() if add_title else None
         self.poster_composer = PosterComposer() if use_template else None
         self.use_template = use_template
         self.template_path = template_path
@@ -148,25 +146,40 @@ class Key2PosterPipeline:
                 image = self.poster_composer.compose_with_simple_layout(image)
             print(f"  ✓ Poster composed with template layout")
         
-        # Step 6: Add movie poster design (skip if disabled)
-        if self.add_title and self.poster_designer and not self.use_template:
-            print(f"\n[6/7] Adding movie poster design...")
+        # Step 6: Add aesthetic text overlay (skip if disabled)
+        if self.add_title and self.text_overlay and not self.use_template:
+            print(f"\n[6/7] Adding aesthetic text overlay...")
             # Use genre for styling if available
             if hasattr(self, '_current_genre'):
                 genre = self._current_genre
             else:
                 genre = "cinematic"
             
-            image = self.poster_designer.add_movie_poster_elements(
-                image, keywords, genre, keywords
+            # Generate tagline
+            taglines = {
+                "action": "Prepare for action",
+                "horror": "Fear the unknown",
+                "scifi": "The future awaits",
+                "romance": "A love story",
+                "comedy": "Laugh out loud",
+                "fantasy": "Enter the realm",
+                "thriller": "On the edge",
+                "drama": "A powerful story"
+            }
+            tagline = taglines.get(genre, "An epic adventure")
+            
+            image = self.text_overlay.add_poster_text(
+                image=image,
+                title=keywords,
+                genre=genre,
+                tagline=tagline,
+                credits=None
             )
             print(f"  ✓ Title: {keywords.upper()}")
-            print(f"  ✓ Tagline generated")
-            print(f"  ✓ Cast & crew added")
-            print(f"  ✓ Release date added")
-            print(f"  ✓ Rating: {self.poster_designer.get_rating(genre)}")
+            print(f"  ✓ Genre: {genre}")
+            print(f"  ✓ Tagline: {tagline}")
         else:
-            print(f"\n[6/7] Movie poster design disabled - skipped")
+            print(f"\n[6/7] Text overlay disabled - skipped")
         
         # Step 6: Save output
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
