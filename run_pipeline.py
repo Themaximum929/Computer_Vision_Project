@@ -16,6 +16,9 @@ def main():
     parser.add_argument("--no-text-removal", action="store_true", help="Disable text removal")
     parser.add_argument("--aggressive-text-removal", action="store_true", help="Use aggressive text removal")
     parser.add_argument("--no-super-res", action="store_true", help="Disable super-resolution enhancement")
+    parser.add_argument("--use-flux", action="store_true", help="Use FLUX.1 instead of Stable Diffusion")
+    parser.add_argument("--flux-model", type=str, default="black-forest-labs/FLUX.1-schnell", 
+                       help="FLUX model (schnell or dev)")
     args = parser.parse_args()
     
     # Initialize pipeline
@@ -27,7 +30,9 @@ def main():
         add_title=args.add_title,
         remove_text=not args.no_text_removal,
         aggressive_text_removal=args.aggressive_text_removal,
-        super_resolution=not args.no_super_res
+        super_resolution=not args.no_super_res,
+        use_flux=args.use_flux,
+        flux_model=args.flux_model
     )
     
     # Generate poster

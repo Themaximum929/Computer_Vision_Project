@@ -1,6 +1,7 @@
 """Main Key2Poster Pipeline"""
 from src.concept_expander import ConceptExpander
 from src.visual_generator import VisualGenerator
+from src.visual_generator_flux import VisualGeneratorFlux
 from src.evaluator import PosterEvaluator
 from src.refiner import QualityRefiner
 from src.super_resolution import SuperResolution
@@ -18,12 +19,13 @@ import os
 class Key2PosterPipeline:
     def __init__(self, lora_path=None, use_lora=False, remove_text=True, aggressive_text_removal=False, 
                  super_resolution=True, add_title=False, baseline_style=False, genre_lora=False, 
-                 use_template=False, template_path=None):
+                 use_template=False, template_path=None, use_flux=False, flux_model="black-forest-labs/FLUX.1-schnell"):
         print("Initializing Key2Poster Pipeline...")
         print("Multi-Agent System (7 Agents):")
         print("  Agent 1: Concept Expander (Sentiment Analysis + Thematic Expansion)")
         print(f"  Agent 2: Genre Classifier ({'Enabled' if genre_lora else 'Disabled'})")
-        print(f"  Agent 3: Visual Designer ({'Baseline' if baseline_style else 'Genre-LoRA' if genre_lora else 'LoRA' if use_lora else 'Standard'})")
+        model_type = 'FLUX' if use_flux else ('Baseline' if baseline_style else 'Genre-LoRA' if genre_lora else 'LoRA' if use_lora else 'Standard')
+        print(f"  Agent 3: Visual Designer ({model_type})")
         print(f"  Agent 4: Text Remover ({'Aggressive' if aggressive_text_removal else 'Standard'} Mode)")
         print(f"  Agent 5: Quality Enhancer (Denoise + {'Super-Res' if super_resolution else 'Standard'})")
         print(f"  Agent 6: Text Overlay ({'Enabled' if add_title else 'Disabled'})")
@@ -36,10 +38,14 @@ class Key2PosterPipeline:
         self.baseline_style = baseline_style
         self.use_lora = use_lora
         self.lora_path = lora_path
+        self.use_flux = use_flux
+        self.flux_model = flux_model
         
         # Generator will be created per-generation if genre_lora is enabled
         if not genre_lora:
-            if baseline_style:
+            if use_flux:
+                self.generator = VisualGeneratorFlux(model_id=flux_model)
+            elif baseline_style:
                 self.generator = VisualGenerator(lora_path=None, use_lora=False)
             else:
                 self.generator = VisualGenerator(lora_path=lora_path, use_lora=use_lora)
@@ -85,14 +91,18 @@ class Key2PosterPipeline:
             self._current_genre = genre  # Store for text styling
             print(f"\n[2/7] Detected genre: {genre}")
             
-            # Load genre-specific LoRA
-            genre_lora_path = f"models/lora_{genre}"
-            if os.path.exists(genre_lora_path):
-                print(f"  Loading {genre} LoRA...")
-                self.generator = VisualGenerator(lora_path=genre_lora_path, use_lora=True)
+            # Load genre-specific LoRA (only if not using FLUX)
+            if self.use_flux:
+                print(f"  Using FLUX (LoRA not supported)")
+                self.generator = VisualGeneratorFlux(model_id=self.flux_model)
             else:
-                print(f"  {genre} LoRA not found, using baseline")
-                self.generator = VisualGenerator(lora_path=None, use_lora=False)
+                genre_lora_path = f"models/lora_{genre}"
+                if os.path.exists(genre_lora_path):
+                    print(f"  Loading {genre} LoRA...")
+                    self.generator = VisualGenerator(lora_path=genre_lora_path, use_lora=True)
+                else:
+                    print(f"  {genre} LoRA not found, using baseline")
+                    self.generator = VisualGenerator(lora_path=None, use_lora=False)
         
         # Step 3: Generate visual
         print(f"\n[3/7] Generating poster...")
