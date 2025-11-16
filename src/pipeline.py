@@ -7,7 +7,7 @@ from src.refiner import QualityRefiner
 from src.super_resolution import SuperResolution
 from src.text_remover import TextRemover
 from src.aggressive_text_remover import AggressiveTextRemover
-from src.aesthetic_text_overlay import AestheticTextOverlay
+from src.enhanced_text_overlay import EnhancedTextOverlay
 from src.poster_composer import PosterComposer
 from src.genre_classifier import GenreClassifier
 from PIL import Image, ImageEnhance
@@ -57,7 +57,7 @@ class Key2PosterPipeline:
             self.text_remover = None
         self.refiner = QualityRefiner()
         self.super_res = SuperResolution() if super_resolution else None
-        self.text_overlay = AestheticTextOverlay() if add_title else None
+        self.text_overlay = EnhancedTextOverlay() if add_title else None
         self.poster_composer = PosterComposer() if use_template else None
         self.use_template = use_template
         self.template_path = template_path
