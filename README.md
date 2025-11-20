@@ -175,6 +175,57 @@ python test_text_styles.py
 
 ---
 
+## Testing Guide
+
+### 1. Test OCR Text Removal (Agent 4)
+```bash
+python test_text_removal.py
+```
+Tests aggressive text remover with HuggingFace OCR models.
+
+### 2. Test Genre Text Styling (Agent 6)
+```bash
+python test_text_styles.py
+```
+Generates samples of all 9 genre-specific text overlay styles.
+
+### 3. Test Full Pipeline with UI
+```bash
+python app_unified.py
+```
+Launches complete web interface with all 7 agents integrated.
+Open: **http://localhost:7860**
+
+### 4. Test End-to-End CLI Pipeline
+```bash
+# Test genre detection + LoRA + text overlay
+python run_pipeline.py "space exploration adventure" --genre-lora --add-title
+
+# Test with different genres
+python run_pipeline.py "dark horror mansion" --genre-lora --add-title
+python run_pipeline.py "romantic sunset beach" --genre-lora --add-title
+```
+
+### 5. Quick Component Verification
+```bash
+# Test genre classifier
+python -c "from src.genre_classifier import GenreClassifier; gc = GenreClassifier(); print(gc.classify('dark horror mansion'))"
+
+# Test concept expander
+python -c "from src.concept_expander import ConceptExpander; ce = ConceptExpander(); print(ce.expand('cyberpunk city'))"
+
+# Verify text remover loaded
+python -c "from src.aggressive_text_remover import AggressiveTextRemover; print('✓ Text remover ready')"
+```
+
+### Recommended Test Order
+1. **test_text_styles.py** - Verify genre text embeddings
+2. **test_text_removal.py** - Verify OCR removal works
+3. **app_unified.py** - Test full UI pipeline
+4. **run_pipeline.py** - Validate end-to-end with various genres
+
+---
+
 ## Summary
 
 ```bash
@@ -183,6 +234,11 @@ python src/collect_data.py                    # Collect posters
 python preprocess_training_data.py            # Remove text
 python src/train_lora.py --data-dir data/posters_clean  # Train
 python run_pipeline.py "keywords" --genre-lora --add-title  # Generate
+
+# Testing workflow
+python test_text_styles.py                    # Test text styling
+python test_text_removal.py                   # Test OCR removal
+python app_unified.py                         # Test full UI
 ```
 
 **Result:** Professional posters with genre-matched styling! 🎨
