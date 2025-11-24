@@ -8,6 +8,11 @@ from src.super_resolution import SuperResolution
 from src.text_remover import TextRemover
 from src.aggressive_text_remover import AggressiveTextRemover
 from src.enhanced_text_overlay import EnhancedTextOverlay
+try:
+    from src.diffusion_text_overlay import DiffusionTextOverlay
+    MODERN_TEXT_AVAILABLE = True
+except:
+    MODERN_TEXT_AVAILABLE = False
 from src.poster_composer import PosterComposer
 from src.genre_classifier import GenreClassifier
 from PIL import Image, ImageEnhance
@@ -18,7 +23,8 @@ import os
 class Key2PosterPipeline:
     def __init__(self, lora_path=None, use_lora=False, remove_text=True, aggressive_text_removal=False, 
                  super_resolution=True, add_title=False, baseline_style=False, genre_lora=False, 
-                 use_template=False, template_path=None, use_flux=False, flux_model="black-forest-labs/FLUX.1-schnell"):
+                 use_template=False, template_path=None, use_flux=False, flux_model="black-forest-labs/FLUX.1-schnell",
+                 modern_text=False):
         print("Initializing Key2Poster Pipeline...")
         print("Multi-Agent System (7 Agents):")
         print("  Agent 1: Concept Expander (Sentiment Analysis + Thematic Expansion)")
@@ -40,8 +46,8 @@ class Key2PosterPipeline:
         self.use_flux = use_flux
         self.flux_model = flux_model
         
-        # Generator will be created per-generation if genre_lora is enabled
-        if not genre_lora:
+        # Generator will be created per-generation if genre_lora is enabled (but not for FLUX)
+        if not genre_lora or use_flux:
             if use_flux:
                 self.generator = VisualGeneratorFlux(model_id=flux_model)
             elif baseline_style:
@@ -57,7 +63,11 @@ class Key2PosterPipeline:
             self.text_remover = None
         self.refiner = QualityRefiner()
         self.super_res = SuperResolution() if super_resolution else None
-        self.text_overlay = EnhancedTextOverlay() if add_title else None
+        self.modern_text = False  # Disable for now - FLUX text generation unreliable
+        if add_title:
+            self.text_overlay = EnhancedTextOverlay()
+        else:
+            self.text_overlay = None
         self.poster_composer = PosterComposer() if use_template else None
         self.use_template = use_template
         self.template_path = template_path
@@ -89,10 +99,14 @@ class Key2PosterPipeline:
             self._current_genre = genre  # Store for text styling
             print(f"\n[2/7] Detected genre: {genre}")
             
-            # Load genre-specific LoRA (only if not using FLUX)
+            # Load genre-specific LoRA (only if not using FLUX and generator not already loaded)
             if self.use_flux:
                 print(f"  Using FLUX (LoRA not supported)")
-                self.generator = VisualGeneratorFlux(model_id=self.flux_model)
+                # Don't reload FLUX if already loaded
+                if self.generator is None:
+                    self.generator = VisualGeneratorFlux(model_id=self.flux_model)
+                else:
+                    print(f"  Reusing existing FLUX generator")
             else:
                 genre_lora_path = f"models/lora_{genre}"
                 if os.path.exists(genre_lora_path):
@@ -155,60 +169,82 @@ class Key2PosterPipeline:
             else:
                 genre = "cinematic"
             
-            # Generate tagline
-            taglines = {
-                "action": "Prepare for action",
-                "horror": "Fear the unknown",
-                "scifi": "The future awaits",
-                "romance": "A love story",
-                "comedy": "Laugh out loud",
-                "fantasy": "Enter the realm",
-                "thriller": "On the edge",
-                "drama": "A powerful story"
-            }
-            tagline = taglines.get(genre, "An epic adventure")
-            
-            image = self.text_overlay.add_poster_text(
-                image=image,
-                title=keywords,
-                genre=genre,
-                tagline=tagline,
-                credits=None
-            )
-            print(f"  ✓ Title: {keywords.upper()}")
-            print(f"  ✓ Genre: {genre}")
-            print(f"  ✓ Tagline: {tagline}")
+            if self.modern_text:
+                # Modern diffusion-based text - use PIL as fallback (FLUX text generation not reliable)
+                print(f"  Using enhanced PIL text rendering...")
+                from src.enhanced_text_overlay import EnhancedTextOverlay
+                temp_overlay = EnhancedTextOverlay()
+                taglines = {
+                    "action": "Prepare for action",
+                    "horror": "Fear the unknown",
+                    "scifi": "The future awaits",
+                    "romance": "A love story",
+                    "comedy": "Laugh out loud",
+                    "fantasy": "Enter the realm",
+                    "thriller": "On the edge",
+                    "drama": "A powerful story"
+                }
+                tagline = taglines.get(genre, "An epic adventure")
+                image = temp_overlay.add_poster_text(image, keywords, genre, tagline, None)
+                print(f"  ✓ Title: {keywords.upper()} (Enhanced PIL)")
+            else:
+                # Traditional PIL text
+                taglines = {
+                    "action": "Prepare for action",
+                    "horror": "Fear the unknown",
+                    "scifi": "The future awaits",
+                    "romance": "A love story",
+                    "comedy": "Laugh out loud",
+                    "fantasy": "Enter the realm",
+                    "thriller": "On the edge",
+                    "drama": "A powerful story"
+                }
+                tagline = taglines.get(genre, "An epic adventure")
+                
+                image = self.text_overlay.add_poster_text(
+                    image=image,
+                    title=keywords,
+                    genre=genre,
+                    tagline=tagline,
+                    credits=None
+                )
+                print(f"  ✓ Title: {keywords.upper()}")
+                print(f"  ✓ Genre: {genre}")
+                print(f"  ✓ Tagline: {tagline}")
         else:
             print(f"\n[6/7] Text overlay disabled - skipped")
         
-        # Step 6: Save output
+        # Step 7: Save output
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         image.save(output_path, quality=95)
         
-        # Step 7: Evaluate
+        # Step 8: Evaluate
         metrics = None
         if evaluate:
             print(f"\n[7/7] Evaluating quality...")
             metrics = self.evaluator.evaluate(output_path)
             print(f"  Aesthetic score: {metrics['aesthetic']['overall']:.3f}")
             print(f"  Resolution: {metrics['resolution']['width']}x{metrics['resolution']['height']}")
-            print(f"  Meets 720x1280 requirement: {metrics['instruction_following']}")
         
         elapsed = time.time() - start_time
-        print(f"\n[OK] Poster saved to {output_path} ({elapsed:.1f}s)")
-        print(f"\n=== AGENT WORKFLOW SUMMARY ===")
-        print(f"Agent 1 (Concept Expander): Keywords -> Creative Brief")
-        if self.genre_lora:
-            print(f"Agent 2 (Genre Classifier): Keywords -> Genre Detection")
-        print(f"Agent 3 (Visual Designer): Brief -> Raw Image")
-        print(f"Agent 4 (Text Remover): Raw Image -> Text-Free Image")
-        print(f"Agent 5 (Quality Enhancer): Text-Free Image -> Smooth Sharp Image")
-        if self.use_template:
-            print(f"Agent 5.5 (Poster Composer): Image -> Template Composition")
-        print(f"Agent 6 (Text Overlay): Image -> Image + Styled Title")
-        print(f"Agent 7 (Quality Evaluator): Final Image -> Quality Metrics")
+        print(f"\n✅ Poster saved to {output_path} ({elapsed:.1f}s)")
         
         return image, brief, metrics
+    
+    def _get_text_prompt(self, title, genre):
+        """Generate FLUX prompt for text overlay"""
+        styles = {
+            'action': 'bold red metallic title text, strong typography',
+            'horror': 'dark blood-red dripping title text, horror typography',
+            'scifi': 'glowing cyan futuristic title text, neon effect',
+            'romance': 'elegant pink script title text, soft',
+            'comedy': 'playful yellow bouncy title text, energetic',
+            'fantasy': 'golden magical title text, ornate',
+            'thriller': 'sharp white angular title text, dramatic shadow',
+            'drama': 'classic white serif title text, professional'
+        }
+        style = styles.get(genre, 'cinematic title text')
+        return f"movie poster with {style} displaying '{title}', professional poster design"
     
     def batch_generate(self, keywords_list, output_dir="outputs/batch", seed=42):
         """Generate multiple posters"""

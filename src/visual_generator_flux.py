@@ -19,11 +19,14 @@ class VisualGeneratorFlux:
             model_id,
             torch_dtype=torch.bfloat16 if self.device == "cuda" else torch.float32
         )
-        self.pipe = self.pipe.to(self.device)
         
-        # Enable memory optimizations
+        # Enable aggressive memory optimizations for 16GB GPU
         if self.device == "cuda":
-            self.pipe.enable_model_cpu_offload()
+            # Don't move entire model to GPU at once
+            self.pipe.enable_model_cpu_offload()  # Move layers as needed
+            self.pipe.enable_sequential_cpu_offload()  # Even more aggressive
+        else:
+            self.pipe = self.pipe.to(self.device)
     
     def generate(self, prompt, width=720, height=1280, num_inference_steps=4, guidance_scale=0.0, seed=None):
         """Generate poster image from prompt"""
