@@ -11,19 +11,27 @@ pipeline = Key2PosterPipeline(use_flux=True, add_title=False, genre_lora=False, 
 poster_state = {"image": None, "title": "", "bg_color": "#faefcf", "text_color": "#043bb4"}
 
 def hex_to_rgb(color):
+    """Convert color to RGB tuple"""
+    print(f"Converting color: {color} (type: {type(color)})")
     try:
         if isinstance(color, str) and color.startswith('#'):
             hex_color = color.lstrip('#')
-            return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+            rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+            print(f"  -> RGB: {rgb}")
+            return rgb
         elif isinstance(color, str) and color.startswith('rgb'):
             import re
             nums = re.findall(r'\d+', color)
-            return tuple(min(255, int(n)) for n in nums[:3])
+            rgb = tuple(min(255, int(n)) for n in nums[:3])
+            print(f"  -> RGB: {rgb}")
+            return rgb
         elif isinstance(color, dict):
-            # Gradio ColorPicker returns dict
-            return (color.get('r', 250), color.get('g', 239), color.get('b', 207))
-    except:
-        pass
+            # Gradio ColorPicker returns dict with 'r', 'g', 'b' keys
+            rgb = (int(color.get('r', 250)), int(color.get('g', 239)), int(color.get('b', 207)))
+            print(f"  -> RGB: {rgb}")
+            return rgb
+    except Exception as e:
+        print(f"  -> Error: {e}")
     return (250, 239, 207)
 
 # Load template
@@ -96,81 +104,112 @@ def edit_poster(title, bg_color, text_color):
 def load_to_canvas(image, title):
     """Load poster to Fabric.js canvas"""
     if poster_state["image"] is None:
-        return "<p style='color:red'>Generate poster first</p>"
+        return "<p style='color:red;font-size:20px;padding:50px'>❌ Generate poster first!</p>"
     
     import base64
     from io import BytesIO
     
-    # Save current composed poster
-    poster = compose_poster(
-        poster_state["image"], 
-        poster_state["title"],
-        poster_state["bg_color"],
-        poster_state["text_color"]
-    )
+    print(f"Loading canvas with title: {poster_state['title']}")
+    print(f"Image size: {poster_state['image'].size}")
     
+    # Save FLUX image as base64
     buffered = BytesIO()
-    poster.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue()).decode()
+    poster_state["image"].save(buffered, format="PNG")
+    flux_img_str = base64.b64encode(buffered.getvalue()).decode()
+    print(f"Base64 length: {len(flux_img_str)}")
     
-    # Also save FLUX image separately
-    buffered2 = BytesIO()
-    poster_state["image"].save(buffered2, format="PNG")
-    flux_img_str = base64.b64encode(buffered2.getvalue()).decode()
-    
-    return f"""
-    <div style="text-align:center">
-        <canvas id="canvas" width="720" height="1080" style="border:2px solid #333;background:#faefcf"></canvas>
+    html = f"""
+    <div style="text-align:center;padding:20px">
+        <div style="margin-bottom:10px;color:#666;font-weight:bold">Click elements to select • Drag to move • Drag corners to resize • Double-click text to edit</div>
+        <div id="status" style="margin-bottom:10px;color:#2196F3">Loading canvas...</div>
+        <canvas id="posterCanvas" width="720" height="1080" style="border:2px solid #333;background:#faefcf"></canvas>
         <br>
-        <button onclick="exportCanvas()" style="margin:10px;padding:10px 20px;background:#4CAF50;color:white;border:none;cursor:pointer">💾 Export PNG</button>
-        <button onclick="deleteSelected()" style="margin:10px;padding:10px 20px;background:#f44336;color:white;border:none;cursor:pointer">🗑️ Delete Selected</button>
+        <button onclick="exportCanvas()" style="margin:10px;padding:10px 20px;background:#4CAF50;color:white;border:none;cursor:pointer;border-radius:5px">💾 Export PNG</button>
+        <button onclick="deleteSelected()" style="margin:10px;padding:10px 20px;background:#f44336;color:white;border:none;cursor:pointer;border-radius:5px">🗑️ Delete Selected</button>
+        <button onclick="bringToFront()" style="margin:10px;padding:10px 20px;background:#2196F3;color:white;border:none;cursor:pointer;border-radius:5px">⬆️ Bring to Front</button>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
     <script>
-        if(window.canvas) {{ window.canvas.dispose(); }}
+        console.log('Initializing canvas...');
         
-        window.canvas = new fabric.Canvas('canvas');
-        var canvas = window.canvas;
+        if(window.posterCanvas) {{
+            window.posterCanvas.dispose();
+        }}
         
-        // Background color
+        window.posterCanvas = new fabric.Canvas('posterCanvas');
+        var canvas = window.posterCanvas;
+        
+        // Set background color
         canvas.backgroundColor = '{poster_state["bg_color"]}';
         canvas.renderAll();
+        document.getElementById('status').innerText = 'Background loaded';
+        console.log('Background set to {poster_state["bg_color"]}');
         
-        // Add FLUX image as draggable element
-        fabric.Image.fromURL('data:image/png;base64,{flux_img_str}', function(img) {{
-            img.set({{
+        // Load FLUX image
+        var imgElement = new Image();
+        imgElement.crossOrigin = 'anonymous';
+        
+        imgElement.onload = function() {{
+            document.getElementById('status').innerText = 'Image loaded, adding to canvas...';
+            console.log('Image dimensions:', imgElement.width, 'x', imgElement.height);
+            
+            var fabricImg = new fabric.Image(imgElement, {{
                 left: 54,
                 top: 59,
                 selectable: true,
                 hasControls: true,
-                hasBorders: true
+                hasBorders: true,
+                borderColor: 'blue',
+                cornerColor: 'blue',
+                cornerSize: 10
             }});
-            img.scaleToWidth(601);
-            canvas.add(img);
+            
+            // Scale to fit
+            fabricImg.scaleToWidth(601);
+            canvas.add(fabricImg);
             canvas.renderAll();
-        }});
+            
+            document.getElementById('status').innerText = 'Image added! Adding text...';
+            console.log('Image added, objects count:', canvas.getObjects().length);
+            
+            // Add text after image loads
+            var textObj = new fabric.IText('{poster_state["title"]}', {{
+                left: 360,
+                top: 930,
+                fontSize: 37,
+                fill: '{poster_state["text_color"]}',
+                fontFamily: 'Arial, sans-serif',
+                selectable: true,
+                editable: true,
+                hasControls: true,
+                borderColor: 'red',
+                cornerColor: 'red',
+                cornerSize: 10
+            }});
+            
+            canvas.add(textObj);
+            canvas.renderAll();
+            
+            document.getElementById('status').innerText = '✅ Ready! Click elements to edit';
+            document.getElementById('status').style.color = 'green';
+            console.log('Text added, total objects:', canvas.getObjects().length);
+        }};
         
-        // Add text as editable element
-        var textObj = new fabric.IText('{poster_state["title"]}', {{
-            left: 360,
-            top: 930,
-            fontSize: 37,
-            fill: '{poster_state["text_color"]}',
-            fontFamily: 'Arial',
-            selectable: true,
-            editable: true,
-            hasControls: true
-        }});
-        canvas.add(textObj);
-        canvas.renderAll();
+        imgElement.onerror = function(e) {{
+            document.getElementById('status').innerText = '❌ Failed to load image';
+            document.getElementById('status').style.color = 'red';
+            console.error('Image load error:', e);
+        }};
+        
+        console.log('Starting image load...');
+        imgElement.src = 'data:image/png;base64,{flux_img_str}';
         
         function exportCanvas() {{
             var dataURL = canvas.toDataURL({{format: 'png', quality: 1}});
             var link = document.createElement('a');
-            link.download = 'poster_edited.png';
+            link.download = 'poster_edited_' + Date.now() + '.png';
             link.href = dataURL;
             link.click();
-            alert('Poster exported!');
         }}
         
         function deleteSelected() {{
@@ -178,10 +217,29 @@ def load_to_canvas(image, title):
             if(active) {{
                 canvas.remove(active);
                 canvas.renderAll();
+            }} else {{
+                alert('Select an element first');
             }}
         }}
+        
+        function bringToFront() {{
+            var active = canvas.getActiveObject();
+            if(active) {{
+                canvas.bringToFront(active);
+                canvas.renderAll();
+            }}
+        }}
+        
+        // Debug info
+        setTimeout(function() {{
+            console.log('Final canvas state:');
+            console.log('- Objects:', canvas.getObjects().length);
+            console.log('- Background:', canvas.backgroundColor);
+            console.log('- Size:', canvas.width, 'x', canvas.height);
+        }}, 2000);
     </script>
     """
+    return html
 
 with gr.Blocks(theme=gr.themes.Soft()) as demo:
     gr.Markdown("# 🎨 Adobe-like Poster Editor\nGenerate → Drag & Edit → Export")
@@ -207,8 +265,8 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
                 preview_image = gr.Image(label="Editable Preview", visible=False)
                 status = gr.Markdown("Ready...")
             
-            with gr.Tab("Canvas Editor"):
-                canvas_html = gr.HTML("<p>Generate poster first, then click 'Open Canvas Editor'</p>")
+            with gr.Tab("Canvas Editor") as canvas_tab:
+                canvas_html = gr.HTML("<p style='padding:50px;font-size:18px'>Generate poster first, then click 'Open Canvas Editor'</p>")
                 gr.Markdown("""
                 **Instructions:**
                 - 🖱️ Drag elements to move
@@ -221,7 +279,15 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
         lambda: poster_state.get("title", ""), None, title_input
     )
     edit_btn.click(edit_poster, [title_input, bg_color, text_color], [output_image, status])
-    load_canvas_btn.click(load_to_canvas, [output_image, title_input], canvas_html)
+    def load_and_log():
+        print("\n=== Loading Canvas ===")
+        print(f"Image exists: {poster_state['image'] is not None}")
+        print(f"Title: {poster_state['title']}")
+        print(f"BG Color: {poster_state['bg_color']}")
+        print(f"Text Color: {poster_state['text_color']}")
+        return load_to_canvas(None, None)
+    
+    load_canvas_btn.click(load_and_log, None, canvas_html)
     
     gr.Examples(
         [["anime love story japanese", 42], ["cyberpunk neon city", 123]],
