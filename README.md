@@ -1,6 +1,6 @@
 # Key2Poster: AI Poster Generator
 
-Generate professional posters from 2-5 keywords using FLUX.1 or Stable Diffusion with LoRA fine-tuning.
+Generate professional posters from 2-5 keywords using **FLUX.1** with **template-based composition**.
 
 **Poster Types:** Movie, Advertise, Event, Education, Social, Music, Sports
 
@@ -8,21 +8,26 @@ Generate professional posters from 2-5 keywords using FLUX.1 or Stable Diffusion
 
 ```bash
 pip install -r requirements.txt
-python app_flux.py
+pip install sentencepiece protobuf  # Required for FLUX
+python app.py  # HuggingFace Space version
+# OR
+python app_template.py  # Template editor version
 ```
 Open: **http://localhost:7860**
+
+⚠️ **GPU Required**: FLUX.1 requires CUDA-enabled GPU
 
 ---
 
 ## Features
 
-✅ **FLUX.1 Text Generation** - Native text rendering (no PIL overlay)  
-✅ **Inpainting Editor** - Refine specific regions with brush tool  
+✅ **Template-Based Composition** - Random template selection with professional layouts  
+✅ **FLUX.1 Image Generation** - High-quality image generation with CUDA acceleration  
+✅ **Smart Prompt Enhancement** - Sentiment analysis + thematic expansion (extensible)  
 ✅ **Multiple Poster Types** - Movie, Advertise, Event, Education, Social, Music, Sports  
 ✅ **7 Style Presets** - Cinematic, Minimalist, Neon, Dark, Vintage, Bright, Professional  
-✅ **Genre Detection** - Auto-classify content genre  
-✅ **Text Removal** - Aggressive multi-method detection  
-✅ **Quality Enhancement** - Denoising + super-resolution  
+✅ **Interactive Canvas Editor** - Drag, resize, and edit poster elements  
+✅ **LLM Text Processing** - Intelligent title generation from keywords  
 ✅ **Aesthetic Scoring** - Automated quality evaluation  
 
 ---
@@ -31,27 +36,22 @@ Open: **http://localhost:7860**
 
 ### Web Interface (Recommended)
 ```bash
-python app_flux.py        # FLUX with poster types
-python app_inpaint.py     # FLUX + Inpainting editor
-python app_simple.py      # SD 1.5 baseline
-python app_unified.py     # SD 1.5 with LoRA
-```
-
-### Command Line
-```bash
-python run_pipeline_flux.py "cyberpunk city" --style neon --type advertise
+python app.py              # HuggingFace Space (GPU required)
+python app_template.py     # Template editor with canvas
+python app_flux.py         # Original FLUX interface
 ```
 
 ### Python API
 ```python
 from src.pipeline import Key2PosterPipeline
 
+# Template-based generation (NEW)
 pipeline = Key2PosterPipeline(
     use_flux=True,
-    add_title=True,
-    genre_lora=True,
-    poster_type='advertise',
-    style_preset='bright'
+    add_title=False,  # Text added via template
+    genre_lora=False,
+    remove_text=True,
+    aggressive_text_removal=True
 )
 
 image, brief, metrics = pipeline.generate_poster(
@@ -59,6 +59,9 @@ image, brief, metrics = pipeline.generate_poster(
     output_path="poster.png",
     seed=42
 )
+
+# Template info available in brief['template']
+print(f"Template size: {brief['template']['size']}")
 ```
 
 ---
@@ -91,37 +94,64 @@ image, brief, metrics = pipeline.generate_poster(
 
 ---
 
-## Multi-Agent System (7 Agents)
+## New Pipeline (5 Steps)
 
-1. **Concept Expander** - Sentiment analysis + thematic expansion
-2. **Genre Classifier** - Auto-detect genre from keywords
-3. **Visual Designer** - FLUX.1 or SD 1.5 + genre-specific LoRA
-4. **Text Remover** - Aggressive multi-method text detection
-5. **Quality Enhancer** - Denoising + super-resolution
-6. **Text Overlay** - FLUX native text generation
-7. **Quality Evaluator** - Aesthetic scoring + validation
+### 1. **Template Selection**
+- Randomly selects poster template from `templates/` folder
+- Extracts image region dimensions and text placement
+- Supports multiple layout variations
+
+### 2. **Prompt Enhancement** 🔧 TODO
+- Current: Basic sentiment analysis + thematic expansion
+- **Extensible**: Teammates can enhance `src/concept_expander.py`
+- Receives template image size for context-aware enhancement
+- Returns enhanced prompt optimized for FLUX generation
+
+### 3. **FLUX Image Generation**
+- Generates high-quality image using FLUX.1-schnell
+- Automatically resizes to fit template's image region
+- Clean image without text (text added separately)
+
+### 4. **Template Composition**
+- Merges FLUX image with template background
+- Places image in designated region from template
+- Adds LLM-processed text overlay with proper positioning
+
+### 5. **Quality Evaluation**
+- Aesthetic scoring
+- Resolution validation
+- Saves final composed poster
 
 ---
 
-## Training Workflow
+## Template System
 
-### 1. Collect Data
-```bash
-python src/collect_data.py
+### Template Structure
+Templates are JSON files in `templates/` folder:
+```json
+{
+  "size": [720, 1080],
+  "layers": [
+    {
+      "name": "Background",
+      "bbox": [0, 0, 720, 1080]
+    },
+    {
+      "name": "Image",
+      "bbox": [54, 59, 655, 873]
+    },
+    {
+      "name": "Text",
+      "bbox": [240, 930, 472, 989]
+    }
+  ]
+}
 ```
-Scrapes movie posters from IMDB → `data/posters/`
 
-### 2. Preprocess
-```bash
-python preprocess_training_data.py
-```
-Removes text from posters → `data/posters_clean/`
-
-### 3. Train LoRA
-```bash
-python src/train_lora.py --data-dir data/posters_clean
-```
-Trains genre-specific LoRA models → `models/`
+### Adding New Templates
+1. Create `templates/templateN_layers.json`
+2. Define poster size and layer bounding boxes
+3. Pipeline automatically detects and uses new templates
 
 ---
 
@@ -129,91 +159,118 @@ Trains genre-specific LoRA models → `models/`
 
 ```
 ├── src/
-│   ├── pipeline.py                  # Main orchestrator
-│   ├── concept_expander.py          # Agent 1
-│   ├── genre_classifier.py          # Agent 2
-│   ├── visual_generator.py          # Agent 3 (SD 1.5)
-│   ├── visual_generator_flux.py     # Agent 3 (FLUX)
-│   ├── text_remover.py              # Agent 4
-│   ├── aggressive_text_remover.py   # Agent 4 (advanced)
-│   ├── refiner.py                   # Agent 5
-│   ├── super_resolution.py          # Agent 5
-│   ├── enhanced_flux_text.py        # Agent 6 (FLUX text)
-│   ├── evaluator.py                 # Agent 7
-│   ├── lora_trainer.py              # LoRA training
-│   └── train_lora.py                # Training script
-├── app_flux.py                      # FLUX web UI
-├── app_simple.py                    # SD 1.5 web UI
-├── app_unified.py                   # SD 1.5 + LoRA web UI
-├── run_pipeline_flux.py             # CLI tool
-└── preprocess_training_data.py      # Preprocessing
+│   ├── pipeline.py                  # Main orchestrator (5-step pipeline)
+│   ├── concept_expander.py          # Prompt enhancement (TODO: extend here)
+│   ├── visual_generator_flux.py     # FLUX.1 image generation
+│   ├── evaluator.py                 # Quality evaluation
+│   └── ...
+├── templates/
+│   ├── template1_layers.json        # Poster layout templates
+│   ├── template2_layers.json
+│   └── ...
+├── fonts/
+│   └── Graduate-Regular.ttf         # Text overlay font
+├── app.py                           # HuggingFace Space (GPU)
+├── app_template.py                  # Template editor with canvas
+├── app_flux.py                      # Original FLUX interface
+└── requirements.txt                 # Dependencies
 ```
 
 ---
 
 ## Performance
 
-| Hardware | Time per Image |
+| Hardware | Time per Poster |
 |----------|----------------|
 | RTX 3090 | ~10-15s |
-| RTX 2060 | ~15-20s |
-| CPU | ~2-3min |
+| RTX 4090 | ~8-12s |
+| RTX 3060 | ~20-30s |
+| CPU | ❌ Not supported (GPU required) |
 
 ---
 
 ## Examples
 
 ```bash
-# Movie poster
-python app_flux.py
-# Input: "space exploration adventure"
-# Type: Movie, Style: Cinematic
+# Template-based generation
+python app_template.py
+# Input: "anime love story japanese"
+# Output: Random template + FLUX image + title overlay
 
-# Event poster
-# Input: "summer music festival"
-# Type: Event, Style: Bright
-
-# Social awareness
-# Input: "save the ocean"
-# Type: Social, Style: Minimalist
-
-# Advertisement
-# Input: "fresh organic food"
-# Type: Advertise, Style: Professional
+# HuggingFace Space
+python app.py
+# Input: "cyberpunk neon city"
+# Type: Movie, Style: Neon
+# Output: Professional poster with template composition
 ```
+
+### Canvas Editor Features
+- 🖱️ Drag elements to reposition
+- 🔄 Resize with corner handles
+- 🖊️ Double-click text to edit
+- 💾 Export final poster as PNG
 
 ---
 
 ## Documentation
 
-- **FLUX_ENHANCEMENTS.md** - FLUX text generation details
-- **PROJECT_STRUCTURE.md** - Clean project structure
-- **requirements.txt** - Dependencies
+- **PIPELINE_CHANGES.md** - New 5-step pipeline details
+- **requirements.txt** - Dependencies (includes sentencepiece)
+- **templates/** - Poster layout templates
+
+## For Teammates: Extending Prompt Enhancement
+
+To enhance the prompt generation (Step 2), modify `src/concept_expander.py`:
+
+```python
+def expand(self, keywords, image_size=None):
+    # Current: Basic sentiment + themes
+    # TODO: Add your advanced enhancement here
+    # - Use image_size for context
+    # - Add more sophisticated NLP
+    # - Integrate external APIs
+    # - Optimize for FLUX generation
+    
+    return {
+        'prompt': enhanced_prompt,
+        'sentiment': sentiment,
+        'confidence': confidence,
+        'mood': mood,
+        'themes': themes
+    }
+```
+
+The pipeline will automatically use your enhanced prompts!
 
 ---
 
 ## Models
 
-- **FLUX.1-schnell** - Fast text generation (4 steps, ~23GB)
-- **Stable Diffusion 1.5** - Baseline model
-- **Genre-specific LoRA** - Action, Horror, Sci-Fi, Romance, Comedy, Fantasy
+- **FLUX.1-schnell** - Fast image generation (4 steps, ~23GB VRAM)
+- **Graduate-Regular.ttf** - Text overlay font
+- **Templates** - JSON-based layout definitions
 
 ---
 
-## Testing
+## Troubleshooting
 
+### "CUDA not available" Error
 ```bash
-# Test FLUX
-python test_flux.py
+# Install PyTorch with CUDA support
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+```
 
-# Test FLUX text generation
-python test_flux_text_generation.py
+### "Cannot instantiate tokenizer" Error
+```bash
+# Install missing dependencies
+pip install sentencepiece protobuf
+```
 
-# Test enhancements
-python test_flux_enhanced.py
-
-# Full comparison
-python test_flux_text_generation_enhanced.py
+### "No module named 'src'" Error
+```bash
+# Run from project root, not from src/ folder
+cd Computer_Vision_Project
+python app.py
 ```
 
 ---
@@ -221,14 +278,23 @@ python test_flux_text_generation_enhanced.py
 ## Summary
 
 ```bash
-# Complete workflow
-python src/collect_data.py                           # Collect data
-python preprocess_training_data.py                   # Preprocess
-python src/train_lora.py --data-dir data/posters_clean  # Train
-python app_flux.py                                   # Generate
-
-# Quick generation
-python app_flux.py  # Web UI
+# Quick Start
+pip install -r requirements.txt
+pip install sentencepiece protobuf
+python app_template.py  # Template editor
+# OR
+python app.py  # HuggingFace Space
 ```
 
-**Result:** Professional posters with FLUX text generation! 🎨
+**Result:** Professional template-based posters with FLUX.1 generation! 🎨
+
+---
+
+## Key Improvements
+
+✅ **Template-based composition** - Consistent professional layouts  
+✅ **Random template selection** - Variety in every generation  
+✅ **Extensible prompt enhancement** - Easy for teammates to improve  
+✅ **Interactive canvas editor** - Full control over final design  
+✅ **GPU-optimized** - Fast generation with CUDA acceleration  
+✅ **HuggingFace Space ready** - Deploy with @spaces.GPU decorator
