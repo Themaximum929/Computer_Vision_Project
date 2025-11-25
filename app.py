@@ -1,5 +1,6 @@
 """Hugging Face Space - FLUX Poster Generator"""
 import gradio as gr
+import spaces
 from src.pipeline import Key2PosterPipeline
 import time
 import os
@@ -7,18 +8,25 @@ import torch
 
 # HF Space optimizations
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
-torch.backends.cudnn.benchmark = True
 
 print("🚀 Loading FLUX pipeline for HF Space...")
-pipeline = Key2PosterPipeline(
-    use_flux=True,
-    add_title=True,
-    genre_lora=False,
-    remove_text=False,
-    super_resolution=False
-)
+pipeline = None
+
+def load_pipeline():
+    global pipeline
+    if pipeline is None:
+        pipeline = Key2PosterPipeline(
+            use_flux=True,
+            add_title=True,
+            genre_lora=False,
+            remove_text=False,
+            super_resolution=False
+        )
+    return pipeline
+
 print("✅ Ready!")
 
+@spaces.GPU
 def generate(keywords, poster_type, style_preset, seed, progress=gr.Progress()):
     try:
         progress(0, desc="Validating input...")
@@ -26,13 +34,20 @@ def generate(keywords, poster_type, style_preset, seed, progress=gr.Progress()):
         if len(keyword_list) < 2 or len(keyword_list) > 5:
             return None, f"❌ Provide 2-5 keywords (got {len(keyword_list)})"
         
-        progress(0.2, desc="Generating poster...")
+        progress(0.1, desc="Selecting template...")
+        # Template is randomly selected inside pipeline
+        
+        progress(0.3, desc="Enhancing prompt...")
+        # TODO: Advanced prompt enhancement (teammates will implement)
+        
+        progress(0.5, desc="Generating with FLUX...")
         start = time.time()
         
-        pipeline.style_preset = style_preset
-        pipeline.poster_type = poster_type
+        pipe = load_pipeline()
+        pipe.style_preset = style_preset
+        pipe.poster_type = poster_type
         
-        image, brief, metrics = pipeline.generate_poster(
+        image, brief, metrics = pipe.generate_poster(
             keywords,
             output_path=f"outputs/poster_{int(time.time())}.png",
             seed=seed if seed > 0 else None
@@ -43,10 +58,10 @@ def generate(keywords, poster_type, style_preset, seed, progress=gr.Progress()):
         
         info = f"""### ✅ Generated in {elapsed:.1f}s
 
-**Type:** {poster_type.title()} | **Style:** {style_preset.title()} | **Genre:** {getattr(pipeline, '_current_genre', 'N/A')}  
+**Type:** {poster_type.title()} | **Style:** {style_preset.title()} | **Genre:** {getattr(pipe, '_current_genre', 'N/A')}  
 **Sentiment:** {brief['sentiment']} ({brief['confidence']:.0%}) | **Aesthetic:** {metrics['aesthetic']['overall']:.3f}
 
-> 🎨 Text rendered natively by FLUX.1-schnell
+> 🎨 Template-based composition with FLUX-generated image
 """
         return image, info
         

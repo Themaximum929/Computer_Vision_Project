@@ -4,11 +4,20 @@ from src.pipeline import Key2PosterPipeline
 from PIL import Image, ImageDraw, ImageFont
 import json
 import time
+import random
+import glob
 
 pipeline = Key2PosterPipeline(use_flux=True, add_title=False, genre_lora=False, remove_text=True, super_resolution=False, aggressive_text_removal=True)
 
+# Load all templates
+templates = []
+for template_file in glob.glob("templates/template*_layers.json"):
+    with open(template_file) as f:
+        templates.append(json.load(f))
+print(f"Loaded {len(templates)} templates")
+
 # Store current poster state
-poster_state = {"image": None, "title": "", "bg_color": "#faefcf", "text_color": "#043bb4"}
+poster_state = {"image": None, "title": "", "bg_color": "#faefcf", "text_color": "#043bb4", "template": None}
 
 def hex_to_rgb(color):
     """Convert color to RGB tuple"""
@@ -34,9 +43,7 @@ def hex_to_rgb(color):
         print(f"  -> Error: {e}")
     return (250, 239, 207)
 
-# Load template
-with open("templates/template1_layers.json") as f:
-    template = json.load(f)
+
 
 def generate_with_template(keywords, seed):
     try:
@@ -44,46 +51,62 @@ def generate_with_template(keywords, seed):
         if len(keyword_list) < 2 or len(keyword_list) > 5:
             return None, None, "❌ Provide 2-5 keywords"
         
-        # Generate FLUX image (no text)
-        image, brief, _ = pipeline.generate_poster(keywords, seed=seed if seed > 0 else None)
+        # Pipeline now handles everything: template selection, FLUX generation, and composition
+        poster, brief, _ = pipeline.generate_poster(keywords, seed=seed if seed > 0 else None)
         
-        # Store for editing
-        poster_state["image"] = image
+        # Extract template from brief
+        template = brief.get('template', templates[0] if templates else {"size": [720, 1080], "layers": []})
+        
+        # Store for editing (need to extract just the FLUX image from composed poster)
+        img_layer = next((l for l in template['layers'] if 'image' in l['name'].lower()), None)
+        if img_layer:
+            img_bbox = img_layer['bbox']
+            # Extract the FLUX-generated image from the composed poster
+            flux_image = poster.crop((img_bbox[0], img_bbox[1], img_bbox[2], img_bbox[3]))
+            poster_state["image"] = flux_image
+        else:
+            poster_state["image"] = poster
+        
         poster_state["title"] = " ".join(keyword_list[:3]).title()
+        poster_state["template"] = template
         
-        # Create poster
-        poster = compose_poster(image, poster_state["title"], poster_state["bg_color"], poster_state["text_color"])
-        
-        info = f"✅ Generated\n\n**Title:** {poster_state['title']}\n**Font:** Graduate-Regular (37px)\n**BG:** {poster_state['bg_color']}\n**Text:** {poster_state['text_color']}"
+        template_idx = next((i for i, t in enumerate(templates) if t == template), 0)
+        info = f"✅ Generated\n\n**Title:** {poster_state['title']}\n**Template:** {template_idx+1}/{len(templates)}\n**Font:** Graduate-Regular (37px)\n**BG:** {poster_state['bg_color']}\n**Text:** {poster_state['text_color']}"
         
         return poster, poster, info
         
     except Exception as e:
-        return None, None, f"❌ Error: {str(e)}"
+        import traceback
+        return None, None, f"❌ Error: {str(e)}\n{traceback.format_exc()}"
 
 def compose_poster(image, title, bg_color, text_color):
     """Compose poster from layers"""
-    # Background layer - solid color only
+    template = poster_state.get("template") or templates[0]
+    
+    # Background layer
     bg_rgb = hex_to_rgb(bg_color)
     poster = Image.new('RGB', tuple(template['size']), bg_rgb)
     
-    # Image layer (center area) - paste on top of background
-    img_bbox = [54, 59, 655, 873]
-    img_w, img_h = img_bbox[2] - img_bbox[0], img_bbox[3] - img_bbox[1]
-    center_img = image.resize((img_w, img_h))
-    poster.paste(center_img, (img_bbox[0], img_bbox[1]))
+    # Image layer - find image layer in template (case-insensitive)
+    img_layer = next((l for l in template['layers'] if 'image' in l['name'].lower()), None)
+    if img_layer:
+        img_bbox = img_layer['bbox']
+        img_w, img_h = img_bbox[2] - img_bbox[0], img_bbox[3] - img_bbox[1]
+        center_img = image.resize((img_w, img_h), Image.Resampling.LANCZOS)
+        poster.paste(center_img, (img_bbox[0], img_bbox[1]))
+        print(f"  ✓ Pasted {image.size} image resized to {center_img.size} at {img_bbox}")
     
-    # Text layer
-    draw = ImageDraw.Draw(poster)
-    font = ImageFont.truetype("fonts/Graduate-Regular.ttf", 37)
-    text_bbox = [240, 930, 472, 989]
-    text_x = (text_bbox[0] + text_bbox[2]) // 2
-    text_y = text_bbox[1]
-    
-    # Draw text (replace newlines with space for single line)
-    title_single = title.replace('\n', ' ').replace('\r', ' ')
-    bbox = draw.textbbox((text_x, text_y), title_single, font=font, anchor='mt')
-    draw.text((text_x, text_y), title_single, font=font, fill=hex_to_rgb(text_color), anchor='mt')
+    # Text layer - find text layer in template (case-insensitive)
+    text_layer = next((l for l in template['layers'] if 'text' in l['name'].lower()), None)
+    if text_layer:
+        draw = ImageDraw.Draw(poster)
+        font = ImageFont.truetype("fonts/Graduate-Regular.ttf", 37)
+        text_bbox = text_layer['bbox']
+        text_x = (text_bbox[0] + text_bbox[2]) // 2
+        text_y = text_bbox[1]
+        
+        title_single = title.replace('\n', ' ').replace('\r', ' ')
+        draw.text((text_x, text_y), title_single, font=font, fill=hex_to_rgb(text_color), anchor='mt')
     
     return poster
 
@@ -108,6 +131,13 @@ def load_to_canvas(image, title):
     
     import base64
     from io import BytesIO
+    
+    template = poster_state.get("template") or templates[0]
+    img_layer = next((l for l in template['layers'] if l['name'] == 'image'), None)
+    text_layer = next((l for l in template['layers'] if l['name'] == 'text'), None)
+    
+    img_bbox = img_layer['bbox'] if img_layer else [54, 59, 655, 873]
+    text_bbox = text_layer['bbox'] if text_layer else [240, 930, 472, 989]
     
     print(f"Loading canvas with title: {poster_state['title']}")
     print(f"Image size: {poster_state['image'].size}")
@@ -154,8 +184,8 @@ def load_to_canvas(image, title):
             console.log('Image dimensions:', imgElement.width, 'x', imgElement.height);
             
             var fabricImg = new fabric.Image(imgElement, {{
-                left: 54,
-                top: 59,
+                left: {img_bbox[0]},
+                top: {img_bbox[1]},
                 selectable: true,
                 hasControls: true,
                 hasBorders: true,
@@ -165,7 +195,7 @@ def load_to_canvas(image, title):
             }});
             
             // Scale to fit
-            fabricImg.scaleToWidth(601);
+            fabricImg.scaleToWidth({img_bbox[2] - img_bbox[0]});
             canvas.add(fabricImg);
             canvas.renderAll();
             
@@ -174,8 +204,8 @@ def load_to_canvas(image, title):
             
             // Add text after image loads
             var textObj = new fabric.IText('{poster_state["title"]}', {{
-                left: 360,
-                top: 930,
+                left: {(text_bbox[0] + text_bbox[2]) // 2},
+                top: {text_bbox[1]},
                 fontSize: 37,
                 fill: '{poster_state["text_color"]}',
                 fontFamily: 'Arial, sans-serif',

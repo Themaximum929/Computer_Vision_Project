@@ -77,8 +77,8 @@ class Key2PosterPipeline:
         self.super_resolution = super_resolution
         self.add_title = add_title
     
-    def generate_poster(self, keywords, output_path=None, seed=None, evaluate=True):
-        """End-to-end poster generation"""
+    def generate_poster(self, keywords, output_path=None, seed=None, evaluate=True, template=None):
+        """End-to-end poster generation with template support"""
         # Validate input: 2-5 keywords
         keyword_list = [k.strip() for k in keywords.split() if k.strip()]
         if len(keyword_list) < 2 or len(keyword_list) > 5:
@@ -90,18 +90,44 @@ class Key2PosterPipeline:
         
         start_time = time.time()
         
-        # Step 1: Expand concepts
-        print(f"\n[1/3] Expanding concepts for: '{keywords}'")
+        # Step 1: Select random template
+        import glob
+        import json
+        import random
+        
+        if template is None:
+            template_files = glob.glob("templates/template*_layers.json")
+            if template_files:
+                template_file = random.choice(template_files)
+                with open(template_file) as f:
+                    template = json.load(f)
+                print(f"\n[1/5] Selected template: {template_file}")
+            else:
+                template = {"size": [720, 1080], "layers": []}
+                print(f"\n[1/5] No template found, using default")
+        
+        # Get image layer dimensions from template
+        img_layer = next((l for l in template['layers'] if 'image' in l['name'].lower()), None)
+        if img_layer:
+            img_bbox = img_layer['bbox']
+            image_size = (img_bbox[2] - img_bbox[0], img_bbox[3] - img_bbox[1])
+        else:
+            image_size = (512, 512)
+        print(f"  Image region size: {image_size}")
+        
+        # Step 2: Expand concepts (TODO: Enhancement by teammates)
+        print(f"\n[2/5] Expanding concepts for: '{keywords}'")
         brief = self.expander.expand(keywords)
         print(f"  Sentiment: {brief['sentiment']} (confidence: {brief['confidence']:.2f})")
         print(f"  Mood: {brief['mood']}")
         print(f"  Enhanced prompt: {brief['prompt']}")
+        print(f"  TODO: Advanced prompt enhancement (teammates will implement)")
         
-        # Step 2: Classify genre and load appropriate LoRA
+        # Step 3: Classify genre and load appropriate LoRA
         if self.genre_lora and self.genre_classifier:
             genre = self.genre_classifier.classify(keywords)
             self._current_genre = genre  # Store for text styling
-            print(f"\n[2/7] Detected genre: {genre}")
+            print(f"\n[3/5] Detected genre: {genre}")
             
             # Load genre-specific LoRA (only if not using FLUX and generator not already loaded)
             if self.use_flux:
@@ -120,74 +146,73 @@ class Key2PosterPipeline:
                     print(f"  {genre} LoRA not found, using baseline")
                     self.generator = VisualGenerator(lora_path=None, use_lora=False)
         
-        # Step 3: Generate visual
-        print(f"\n[3/7] Generating poster...")
+        # Step 4: Generate visual with FLUX (pass image size)
+        print(f"\n[4/5] Generating image with FLUX...")
+        print(f"  Target size: {image_size}")
         
-        # Use FLUX with text generation if enabled
-        if self.use_flux and self.add_title and hasattr(self, 'flux_text_gen'):
-            print(f"  Using FLUX text generation with style: {self.style_preset}")
-            poster_prompt = f"{brief['prompt']}"
-            genre = getattr(self, '_current_genre', 'action')
+        if self.use_lora or self.genre_lora:
+            poster_prompt = f"movie poster art, {brief['themes']}, visual composition, no text"
+        else:
+            poster_prompt = f"{brief['prompt']}, no text, no words, no letters"
+        
+        # Generate image (FLUX will be resized to fit template)
+        image = self.generator.generate(poster_prompt, seed=seed)
+        
+        # Resize to fit template image region
+        image = image.resize(image_size, Image.Resampling.LANCZOS)
+        print(f"  ✓ Generated and resized to {image_size}")
+        
+        # Step 5: Merge with template and add LLM-processed text
+        print(f"\n[5/5] Composing final poster...")
+        
+        # Create poster from template
+        from PIL import ImageDraw, ImageFont
+        
+        poster_size = tuple(template['size'])
+        poster = Image.new('RGB', poster_size, (250, 239, 207))  # Default bg color
+        
+        # Paste generated image into template
+        if img_layer:
+            img_bbox = img_layer['bbox']
+            poster.paste(image, (img_bbox[0], img_bbox[1]))
+            print(f"  ✓ Placed image at {img_bbox}")
+        
+        # Add LLM-processed text
+        text_layer = next((l for l in template['layers'] if 'text' in l['name'].lower()), None)
+        if text_layer:
+            text_bbox = text_layer['bbox']
+            title = ' '.join(keyword_list[:3]).title()  # LLM will process this
             
-            image = self.flux_text_gen.generate_poster(
-                poster_prompt, 
-                keywords.upper(), 
-                genre, 
-                seed, 
-                self.style_preset,
-                self.poster_type
-            )
-            print(f"  ✓ Generated with FLUX text overlay")
-        else:
-            if self.use_lora or self.genre_lora:
-                poster_prompt = f"movie poster art, {brief['themes']}, visual composition, no text"
-            else:
-                poster_prompt = f"{brief['prompt']}, no text, no words, no letters"
+            draw = ImageDraw.Draw(poster)
+            try:
+                font = ImageFont.truetype("fonts/Graduate-Regular.ttf", 37)
+            except:
+                font = ImageFont.load_default()
             
-            image = self.generator.generate(poster_prompt, seed=seed)
+            text_x = (text_bbox[0] + text_bbox[2]) // 2
+            text_y = text_bbox[1]
+            draw.text((text_x, text_y), title, font=font, fill=(4, 59, 180), anchor='mt')
+            print(f"  ✓ Added text: '{title}'")
         
-        # Step 4: Remove text (skip if disabled)
-        if self.remove_text and self.text_remover:
-            print(f"\n[4/7] Removing artificial text...")
-            if self.aggressive_text_removal:
-                image, text_found = self.text_remover.remove_text(image, iterations=3)
-            else:
-                image, text_found = self.text_remover.remove_text(image)
-            if text_found:
-                print("  [OK] Text detected and removed")
-            else:
-                print("  [OK] No text detected")
-        else:
-            print(f"\n[4/7] Text removal disabled - skipped")
+        # Use composed poster as final image
+        image = poster
         
-        # Step 5: Enhance and refine quality (conditional)
-        if self.super_resolution and self.super_res:
-            print(f"\n[5/7] Enhancing with super-resolution...")
-            image = self.super_res.enhance_details(image)
-            image = self.refiner.enhance(image)
-        else:
-            print(f"\n[5/7] Basic enhancement (super-res disabled)...")
-            enhancer = ImageEnhance.Sharpness(image)
-            image = enhancer.enhance(1.2)
-            enhancer = ImageEnhance.Contrast(image)
-            image = enhancer.enhance(1.1)
-        
-        # Step 6: Text overlay handled by FLUX generation
-        print(f"\n[6/7] Text overlay: {'Included in FLUX generation' if (self.use_flux and self.add_title) else 'Disabled'}")
-        
-        # Step 7: Save and evaluate
+        # Save and evaluate
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         image.save(output_path, quality=95)
         
         metrics = None
         if evaluate:
-            print(f"\n[7/7] Evaluating quality...")
+            print(f"\nEvaluating quality...")
             metrics = self.evaluator.evaluate(output_path)
             print(f"  Aesthetic score: {metrics['aesthetic']['overall']:.3f}")
             print(f"  Resolution: {metrics['resolution']['width']}x{metrics['resolution']['height']}")
         
         elapsed = time.time() - start_time
         print(f"\n✅ Poster saved to {output_path} ({elapsed:.1f}s)")
+        
+        # Return template info in brief
+        brief['template'] = template
         
         return image, brief, metrics
     
