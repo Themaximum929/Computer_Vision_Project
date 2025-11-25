@@ -7,7 +7,7 @@ print("Loading FLUX pipeline...")
 pipeline = Key2PosterPipeline(
     use_flux=True,
     add_title=True,
-    genre_lora=True,
+    genre_lora=False,  # Disable to avoid loading FLUX twice
     remove_text=False,
     super_resolution=False
 )

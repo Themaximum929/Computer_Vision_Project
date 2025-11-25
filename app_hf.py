@@ -1,8 +1,14 @@
 """Hugging Face Space with ZeroGPU support"""
 import gradio as gr
 import spaces
+import os
+from huggingface_hub import login
 from src.pipeline import Key2PosterPipeline
 import time
+
+# Login with HF token for gated models
+if os.getenv('HF_TOKEN'):
+    login(token=os.getenv('HF_TOKEN'))
 
 # Initialize pipeline (will be moved to GPU on-demand)
 pipeline = Key2PosterPipeline(

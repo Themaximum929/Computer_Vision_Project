@@ -1,5 +1,6 @@
 """Visual Design Agent - Generates poster using FLUX.1"""
 import torch
+import os
 from diffusers import FluxPipeline
 from PIL import Image
 
@@ -20,25 +21,24 @@ class VisualGeneratorFlux:
             torch_dtype=torch.bfloat16 if self.device == "cuda" else torch.float32
         )
         
-        # Speed optimizations for high-end GPU (RTX 4090)
+        # Balanced: Speed + Memory efficiency
         if self.device == "cuda":
-            # Keep model on GPU for maximum speed
-            self.pipe.to(self.device)
-            
-            # Memory optimizations
-            self.pipe.enable_vae_slicing()
-            self.pipe.enable_attention_slicing(slice_size=1)
-            
-            # Use TF32 for faster matmul on Ampere/Ada GPUs (4090)
+            # Use sequential offload (faster than model_cpu_offload)
+            self.pipe.enable_sequential_cpu_offload()
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.backends.cudnn.allow_tf32 = True
-            
-            print("✓ FLUX loaded on GPU (fast mode)")
+            print("✓ FLUX loaded with sequential offload (balanced mode)")
         else:
             self.pipe = self.pipe.to(self.device)
     
-    def generate(self, prompt, width=720, height=1280, num_inference_steps=4, guidance_scale=0.0, seed=None):
+    def generate(self, prompt, width=None, height=None, num_inference_steps=4, guidance_scale=0.0, seed=None):
         """Generate poster image from prompt"""
+        # Local: 512x768 (faster), HF Space: 720x1280 (quality)
+        if width is None:
+            width = 720 if os.getenv('SPACE_ID') else 512
+        if height is None:
+            height = 1280 if os.getenv('SPACE_ID') else 768
+        
         generator = torch.Generator(device=self.device)
         if seed is not None:
             generator = generator.manual_seed(seed)

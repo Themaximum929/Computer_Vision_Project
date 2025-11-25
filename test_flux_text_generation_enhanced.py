@@ -20,18 +20,15 @@ test_cases = [
 
 print("\n[OLD METHOD] - Original FLUX with potential artifacts")
 print("-"*70)
+pipeline_old = Key2PosterPipeline(
+    use_flux=True,
+    add_title=True,
+    genre_lora=True,
+    super_resolution=False,
+    enhanced_flux=False
+)
 for i, (keywords, genre, style) in enumerate(test_cases):
     print(f"\n{i+1}. Generating: {keywords}")
-    
-    # Old method - may have artifacts
-    pipeline_old = Key2PosterPipeline(
-        use_flux=True,
-        add_title=True,
-        genre_lora=True,
-        super_resolution=False,
-        enhanced_flux=False
-    )
-    
     pipeline_old.generate_poster(
         keywords, 
         f"outputs/flux_enhanced_comparison/old_{i}_{genre}.png",
@@ -43,20 +40,17 @@ for i, (keywords, genre, style) in enumerate(test_cases):
 print("\n" + "="*70)
 print("[NEW METHOD] - Enhanced FLUX with fixes")
 print("-"*70)
+pipeline_new = Key2PosterPipeline(
+    use_flux=True,
+    add_title=True,
+    genre_lora=True,
+    super_resolution=False,
+    enhanced_flux=True
+)
 for i, (keywords, genre, style) in enumerate(test_cases):
     print(f"\n{i+1}. Generating: {keywords}")
     print(f"   Style preset: {style}")
-    
-    # New method - enhanced with fixes
-    pipeline_new = Key2PosterPipeline(
-        use_flux=True,
-        add_title=True,
-        genre_lora=True,
-        super_resolution=False,
-        enhanced_flux=True,
-        style_preset=style
-    )
-    
+    pipeline_new.style_preset = style
     pipeline_new.generate_poster(
         keywords,
         f"outputs/flux_enhanced_comparison/new_{i}_{genre}.png",
