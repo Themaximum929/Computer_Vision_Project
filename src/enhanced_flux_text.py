@@ -128,9 +128,12 @@ class EnhancedFluxText:
 class StyleEnhancedFlux:
     """FLUX text generation without PIL overlay"""
     
-    def __init__(self):
-        from src.visual_generator_flux import VisualGeneratorFlux
-        self.generator = VisualGeneratorFlux()
+    def __init__(self, shared_generator=None):
+        if shared_generator:
+            self.generator = shared_generator
+        else:
+            from src.visual_generator_flux import VisualGeneratorFlux
+            self.generator = VisualGeneratorFlux()
     
     def generate_poster(self, keywords, title, genre='action', seed=None, style_preset='cinematic', poster_type='movie'):
         """Generate with FLUX text generation (no PIL overlay)"""

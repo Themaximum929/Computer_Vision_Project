@@ -48,11 +48,12 @@ class Key2PosterPipeline:
         self.poster_type = poster_type
         
         # Use FLUX with text generation if requested
-        if use_flux and add_title and ENHANCED_FLUX_AVAILABLE:
-            self.flux_text_gen = StyleEnhancedFlux()
-            self.generator = None
-        elif use_flux:
+        if use_flux:
             self.generator = VisualGeneratorFlux(model_id=flux_model)
+            if add_title and ENHANCED_FLUX_AVAILABLE:
+                self.flux_text_gen = StyleEnhancedFlux(shared_generator=self.generator)
+            else:
+                self.flux_text_gen = None
         elif not genre_lora:
             if baseline_style:
                 self.generator = VisualGenerator(lora_path=None, use_lora=False)

@@ -22,19 +22,18 @@ class VisualGeneratorFlux:
         
         # Speed optimizations for high-end GPU (RTX 4090)
         if self.device == "cuda":
-            # Use model CPU offload to avoid OOM when multiple models loaded
-            self.pipe.enable_model_cpu_offload()
+            # Keep model on GPU for maximum speed
+            self.pipe.to(self.device)
             
             # Memory optimizations
             self.pipe.enable_vae_slicing()
-            self.pipe.enable_vae_tiling()
             self.pipe.enable_attention_slicing(slice_size=1)
             
             # Use TF32 for faster matmul on Ampere/Ada GPUs (4090)
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.backends.cudnn.allow_tf32 = True
             
-            print("✓ FLUX optimized for RTX 4090")
+            print("✓ FLUX loaded on GPU (fast mode)")
         else:
             self.pipe = self.pipe.to(self.device)
     
