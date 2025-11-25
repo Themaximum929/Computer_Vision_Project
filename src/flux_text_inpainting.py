@@ -63,12 +63,8 @@ class FluxTextPrompt:
     """Generate poster WITH text in one pass"""
     
     def __init__(self):
-        from diffusers import FluxPipeline
-        self.pipe = FluxPipeline.from_pretrained(
-            "black-forest-labs/FLUX.1-schnell",
-            torch_dtype=torch.bfloat16
-        )
-        self.pipe.enable_sequential_cpu_offload()
+        from src.visual_generator_flux import VisualGeneratorFlux
+        self.generator = VisualGeneratorFlux()
     
     def generate_with_text(self, base_prompt, title, genre='action', seed=None):
         """Generate poster with text baked in from start"""
@@ -88,15 +84,14 @@ class FluxTextPrompt:
         # Combined prompt
         full_prompt = f"movie poster, {base_prompt}, with {style} displaying '{title}' at bottom, professional poster design, cinematic composition"
         
-        generator = torch.Generator().manual_seed(seed) if seed else None
-        
-        result = self.pipe(
+        # Use existing generator
+        result = self.generator.pipe(
             full_prompt,
             width=720,
             height=1280,
             num_inference_steps=4,
             guidance_scale=0.0,
-            generator=generator
+            generator=torch.Generator().manual_seed(seed) if seed else None
         ).images[0]
         
         return result
