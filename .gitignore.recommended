@@ -1,0 +1,93 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Data directories (large training data)
+data/posters/
+data/posters_clean/
+data/posters_lora/
+data/posters_by_genre/
+data/products/
+
+# Keep data structure files
+!data/.gitkeep
+!data/README.md
+
+# Models (large LoRA weights)
+models/lora_action/
+models/lora_comedy/
+models/lora_fantasy/
+models/lora_horror/
+models/lora_romance/
+models/lora_scifi/
+models/lora_general/
+models/movie_lora/
+models/poster_lora/*.pth
+models/poster_lora/*.safetensors
+
+# Keep model structure
+!models/.gitkeep
+!models/README.md
+!models/poster_lora/README.md
+!models/poster_lora/adapter_config.json
+
+# Outputs (temporary generated files)
+outputs/
+!outputs/.gitkeep
+!outputs/README.md
+
+# Images (except templates and examples)
+*.jpg
+*.png
+*.jpeg
+
+# Allow template images
+!poster_templates/*.jpg
+!poster_templates/*.png
+
+# Allow font files (they're small and essential)
+!fonts/**/*.ttf
+!fonts/**/*.otf
+!fonts/**/*.txt
+
+# Allow example/documentation images
+!docs/*.png
+!docs/*.jpg
+!.github/*.png
+
+# Model weights
+*.pth
+*.safetensors
+*.ckpt
+*.bin
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/

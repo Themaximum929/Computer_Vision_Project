@@ -1,0 +1,89 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+env/
+venv/
+.venv/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Large model files (>100MB)
+models/**/*.pth
+models/**/*.safetensors
+models/**/*.bin
+*.pth
+*.safetensors
+
+# Keep model configs
+!models/*/config.json
+!models/*/adapter_config.json
+!models/*/README.md
+!models/README.md
+
+# Data - ignore large image files
+data/posters/*.jpg
+data/posters/*.png
+data/posters_clean/*.jpg
+data/posters_clean/*.png
+data/posters_lora/*.jpg
+data/posters_lora/*.png
+data/posters_by_genre/**/*.jpg
+data/posters_by_genre/**/*.png
+data/products/**/*.jpg
+data/products/**/*.png
+
+# Keep data structure and metadata
+!data/README.md
+!data/posters/metadata.json
+!data/posters_clean/metadata.json
+!data/posters_lora/metadata.json
+
+# Outputs - ignore all generated files
+outputs/
+!outputs/.gitkeep
+
+# Fonts - ignore large files, keep README
+fonts/**/*.ttf
+fonts/**/*.otf
+!fonts/**/README.txt
+
+# Templates
+poster_templates/*.jpg
+poster_templates/*.png
+
+# HuggingFace cache (optional - can be huge)
+# Uncomment to ignore local model cache
+# .cache/
+# ~/.cache/huggingface/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.pytest_cache/
