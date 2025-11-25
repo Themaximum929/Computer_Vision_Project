@@ -17,6 +17,7 @@ Open: **http://localhost:7860**
 ## Features
 
 ✅ **FLUX.1 Text Generation** - Native text rendering (no PIL overlay)  
+✅ **Inpainting Editor** - Refine specific regions with brush tool  
 ✅ **Multiple Poster Types** - Movie, Advertise, Event, Education, Social, Music, Sports  
 ✅ **7 Style Presets** - Cinematic, Minimalist, Neon, Dark, Vintage, Bright, Professional  
 ✅ **Genre Detection** - Auto-classify content genre  
@@ -31,6 +32,7 @@ Open: **http://localhost:7860**
 ### Web Interface (Recommended)
 ```bash
 python app_flux.py        # FLUX with poster types
+python app_inpaint.py     # FLUX + Inpainting editor
 python app_simple.py      # SD 1.5 baseline
 python app_unified.py     # SD 1.5 with LoRA
 ```
