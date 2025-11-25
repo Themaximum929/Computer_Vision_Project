@@ -1,48 +1,54 @@
-# Deploy to Hugging Face Spaces (ZeroGPU)
+---
+title: Key2Poster FLUX
+emoji: 🎨
+colorFrom: purple
+colorTo: pink
+sdk: gradio
+sdk_version: 4.44.0
+app_file: app_hf.py
+pinned: false
+license: mit
+python_version: 3.10
+---
 
-## Quick Deploy
+# Key2Poster: AI Poster Generator
 
-1. Create a new Space on Hugging Face: https://huggingface.co/new-space
-2. Select **Gradio** SDK and **ZeroGPU** hardware
-3. Upload these files:
-   - `app_hf.py` (rename to `app.py`)
-   - `requirements.txt`
-   - `src/` folder (entire directory)
-   - `fonts/` folder (if using text overlay)
+Generate professional posters from 2-5 keywords using **FLUX.1-schnell** with native text rendering.
 
-## Requirements for HF Space
+## Features
 
-Add to `requirements.txt`:
-```
-spaces
-gradio
-torch
-diffusers
-transformers
-pillow
-numpy
-```
+✅ **FLUX.1 Text Generation** - Native text rendering (no PIL overlay)  
+✅ **7 Poster Types** - Movie, Advertise, Event, Education, Social, Music, Sports  
+✅ **7 Style Presets** - Cinematic, Minimalist, Neon, Dark, Vintage, Bright, Professional  
+✅ **Multi-Agent System** - 7 specialized agents for quality output  
+✅ **Aesthetic Scoring** - Automated quality evaluation  
 
-## ZeroGPU Benefits
+## Usage
 
-- **Free GPU access** (A100 40GB)
-- **Fast inference** (~5-10s per image)
-- **Auto-scaling** (GPU allocated on-demand)
-- **No VRAM limits** (40GB available)
+1. Enter 2-5 keywords (e.g., "cyberpunk neon city")
+2. Select poster type and style preset
+3. Click "Generate Poster"
+4. Download your professional poster!
 
-## Configuration
+## Examples
 
-The `@spaces.GPU(duration=60)` decorator:
-- Requests GPU for 60 seconds
-- Automatically releases after generation
-- Handles multiple concurrent users
+- **Movie:** "space exploration adventure" + Cinematic style
+- **Event:** "summer music festival" + Bright style
+- **Advertise:** "fresh organic food" + Professional style
+- **Social:** "save the ocean" + Minimalist style
 
-## Local Speed Fix
+## Models
 
-Your local slowness is from CPU offloading. I've removed it - restart your app:
+- **FLUX.1-schnell** - Fast text generation (4-step inference)
+- **Genre Classifier** - Auto-detect content genre
+- **Aesthetic Scorer** - Quality evaluation
 
-```bash
-python app_flux.py
-```
+## Performance
 
-Should now be **10-20s** instead of 460s!
+- Generation time: ~10-20s on GPU
+- Image size: 1024x1024
+- Text: Natively rendered by FLUX
+
+---
+
+Built with ❤️ using FLUX.1 and Gradio

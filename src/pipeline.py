@@ -77,12 +77,16 @@ class Key2PosterPipeline:
         self.super_resolution = super_resolution
         self.add_title = add_title
     
-    def generate_poster(self, keywords, output_path="outputs/poster.png", seed=None, evaluate=True):
+    def generate_poster(self, keywords, output_path=None, seed=None, evaluate=True):
         """End-to-end poster generation"""
         # Validate input: 2-5 keywords
         keyword_list = [k.strip() for k in keywords.split() if k.strip()]
         if len(keyword_list) < 2 or len(keyword_list) > 5:
             raise ValueError(f"Input must contain 2-5 keywords. Got {len(keyword_list)} keywords.")
+        
+        # Set default output path if None
+        if output_path is None:
+            output_path = f"outputs/poster_{int(time.time())}.png"
         
         start_time = time.time()
         
