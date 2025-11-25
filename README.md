@@ -1,79 +1,43 @@
-# Key2Poster: Creative Poster Generator
+# Key2Poster: AI Poster Generator
 
-Generates professional product posters from 2-5 keywords using Stable Diffusion with LoRA fine-tuning.
+Generate professional posters from 2-5 keywords using FLUX.1 or Stable Diffusion with LoRA fine-tuning.
 
-**Product Categories:** Food, Fashion, Electronics, Theme Parks, Beverages, Cosmetics, Travel
+**Poster Types:** Movie, Advertise, Event, Education, Social, Music, Sports
 
 ## Quick Start
 
 ```bash
 pip install -r requirements.txt
-python app_simple.py
+python app_flux.py
 ```
 Open: **http://localhost:7860**
 
 ---
 
-## Complete Workflow
+## Features
 
-### 1. Collect Posters
-```bash
-python src/collect_data.py
-```
-Scrapes movie posters from IMDB with genre labels → `data/posters/`
-
-### 2. Preprocess (Remove Text)
-```bash
-python preprocess_training_data.py
-```
-Removes text from posters before training → `data/posters_clean/`
-
-### 3. Train LoRA
-```bash
-python src/train_lora.py --data-dir data/posters_clean
-```
-Trains genre-specific LoRA models → `models/`
-
-### 4. Generate Posters
-```bash
-python run_pipeline.py "space exploration adventure" --genre-lora --add-title
-```
-Generates poster with genre-matched styling → `outputs/`
+✅ **FLUX.1 Text Generation** - Native text rendering (no PIL overlay)  
+✅ **Multiple Poster Types** - Movie, Advertise, Event, Education, Social, Music, Sports  
+✅ **7 Style Presets** - Cinematic, Minimalist, Neon, Dark, Vintage, Bright, Professional  
+✅ **Genre Detection** - Auto-classify content genre  
+✅ **Text Removal** - Aggressive multi-method detection  
+✅ **Quality Enhancement** - Denoising + super-resolution  
+✅ **Aesthetic Scoring** - Automated quality evaluation  
 
 ---
 
-## Multi-Agent System (7 Agents)
+## Applications
 
-1. **Concept Expander** - Sentiment analysis + thematic expansion
-2. **Genre Classifier** - Auto-detect genre from keywords
-3. **Visual Designer** - Stable Diffusion v1.5 + genre-specific LoRA
-4. **Text Remover** - Aggressive multi-method text detection
-5. **Quality Enhancer** - Denoising + super-resolution
-6. **Text Overlay** - Genre-matched styled titles (9 styles)
-7. **Quality Evaluator** - Aesthetic scoring + validation
-
----
-
-## Usage
-
-### Web Interface
+### Web Interface (Recommended)
 ```bash
-python app_simple.py   # Simple UI
-python app.py          # Full options
-python app_enhanced.py # Enhanced with templates & color extraction
-python app_unified.py  # Unified pipeline (RECOMMENDED)
+python app_flux.py        # FLUX with poster types
+python app_simple.py      # SD 1.5 baseline
+python app_unified.py     # SD 1.5 with LoRA
 ```
 
 ### Command Line
 ```bash
-# Basic generation
-python run_pipeline.py "dark horror mansion"
-
-# With genre detection + styled text
-python run_pipeline.py "space adventure" --genre-lora --add-title
-
-# With seed for reproducibility
-python run_pipeline.py "cyberpunk city" --seed 42
+python run_pipeline_flux.py "cyberpunk city" --style neon --type advertise
 ```
 
 ### Python API
@@ -81,14 +45,15 @@ python run_pipeline.py "cyberpunk city" --seed 42
 from src.pipeline import Key2PosterPipeline
 
 pipeline = Key2PosterPipeline(
-    genre_lora=True,              # Auto-detect genre
-    add_title=True,               # Add styled title
-    aggressive_text_removal=True,
-    super_resolution=True
+    use_flux=True,
+    add_title=True,
+    genre_lora=True,
+    poster_type='advertise',
+    style_preset='bright'
 )
 
 image, brief, metrics = pipeline.generate_poster(
-    "space exploration adventure",
+    "summer sale event",
     output_path="poster.png",
     seed=42
 )
@@ -96,24 +61,65 @@ image, brief, metrics = pipeline.generate_poster(
 
 ---
 
-## Text Styling (9 Genre Styles)
+## Poster Types
 
-| Genre | Color | Effect |
-|-------|-------|--------|
-| Action | Red | Bold, heavy stroke |
-| Horror | Dark Red | Large shadow, centered |
-| Sci-Fi | Cyan | Glowing, wide spacing |
-| Drama | White | Elegant, subtle |
-| Comedy | Yellow | Playful |
-| Thriller | White | Dark shadow |
-| Fantasy | Gold | Magical |
-| Romance | Pink | Soft, delicate |
-| Cinematic | White | Professional |
+| Type | Description | Best For |
+|------|-------------|----------|
+| Movie | Cinematic poster design | Films, entertainment |
+| Advertise | Commercial design | Products, sales |
+| Event | Promotional design | Concerts, festivals |
+| Education | Informative layout | Schools, training |
+| Social | Awareness campaigns | Causes, movements |
+| Music | Concert poster | Bands, festivals |
+| Sports | Athletic design | Games, competitions |
 
-Test all styles:
+---
+
+## Style Presets
+
+| Style | Description |
+|-------|-------------|
+| Cinematic | Dramatic lighting, high contrast |
+| Minimalist | Clean composition, negative space |
+| Neon | Vibrant neon colors, cyberpunk |
+| Dark | Moody atmosphere, noir style |
+| Vintage | Retro style, grain texture |
+| Bright | High energy, cheerful |
+| Professional | Corporate, polished |
+
+---
+
+## Multi-Agent System (7 Agents)
+
+1. **Concept Expander** - Sentiment analysis + thematic expansion
+2. **Genre Classifier** - Auto-detect genre from keywords
+3. **Visual Designer** - FLUX.1 or SD 1.5 + genre-specific LoRA
+4. **Text Remover** - Aggressive multi-method text detection
+5. **Quality Enhancer** - Denoising + super-resolution
+6. **Text Overlay** - FLUX native text generation
+7. **Quality Evaluator** - Aesthetic scoring + validation
+
+---
+
+## Training Workflow
+
+### 1. Collect Data
 ```bash
-python test_text_styles.py
+python src/collect_data.py
 ```
+Scrapes movie posters from IMDB → `data/posters/`
+
+### 2. Preprocess
+```bash
+python preprocess_training_data.py
+```
+Removes text from posters → `data/posters_clean/`
+
+### 3. Train LoRA
+```bash
+python src/train_lora.py --data-dir data/posters_clean
+```
+Trains genre-specific LoRA models → `models/`
 
 ---
 
@@ -121,108 +127,92 @@ python test_text_styles.py
 
 ```
 ├── src/
-│   ├── pipeline.py              # Main orchestrator
-│   ├── concept_expander.py      # Agent 1
-│   ├── genre_classifier.py      # Agent 2
-│   ├── visual_generator.py      # Agent 3
-│   ├── aggressive_text_remover.py # Agent 4
-│   ├── refiner.py               # Agent 5
-│   ├── text_overlay.py          # Agent 6
-│   ├── evaluator.py             # Agent 7
-│   ├── poster_text_styles.py    # Style definitions
-│   ├── scraper.py               # Data collection
-│   └── lora_trainer.py          # LoRA training
-├── preprocess_training_data.py  # Text removal preprocessing
-├── app_simple.py                # Web UI
-├── run_pipeline.py              # CLI tool
-└── test_text_styles.py          # Style testing
+│   ├── pipeline.py                  # Main orchestrator
+│   ├── concept_expander.py          # Agent 1
+│   ├── genre_classifier.py          # Agent 2
+│   ├── visual_generator.py          # Agent 3 (SD 1.5)
+│   ├── visual_generator_flux.py     # Agent 3 (FLUX)
+│   ├── text_remover.py              # Agent 4
+│   ├── aggressive_text_remover.py   # Agent 4 (advanced)
+│   ├── refiner.py                   # Agent 5
+│   ├── super_resolution.py          # Agent 5
+│   ├── enhanced_flux_text.py        # Agent 6 (FLUX text)
+│   ├── evaluator.py                 # Agent 7
+│   ├── lora_trainer.py              # LoRA training
+│   └── train_lora.py                # Training script
+├── app_flux.py                      # FLUX web UI
+├── app_simple.py                    # SD 1.5 web UI
+├── app_unified.py                   # SD 1.5 + LoRA web UI
+├── run_pipeline_flux.py             # CLI tool
+└── preprocess_training_data.py      # Preprocessing
 ```
-
----
-
-## Key Features
-
-✅ **Genre-Specific LoRA** - Trained on genre-labeled posters  
-✅ **Automatic Genre Detection** - Matches style to content  
-✅ **Text Preprocessing** - Clean training data  
-✅ **9 Text Styles** - Genre-matched typography  
-✅ **Aggressive Text Removal** - 3-pass detection  
-✅ **Quality Enhancement** - Denoising + super-resolution  
-✅ **Web Interface** - Easy to use Gradio UI  
-✅ **Reproducible** - Seed-based generation  
-🆕 **Template System** - 4 professional layouts  
-🆕 **Color Extraction** - Smart palette analysis  
-🆕 **Composition Engine** - Intelligent element placement  
-🆕 **Vignette Effects** - Professional focus enhancement
-
----
-
-## Documentation
-
-- **PREPROCESSING_GUIDE.md** - Text removal & styling guide
-- **QUICK_REFERENCE.md** - Command reference
-- **requirements.txt** - Dependencies
 
 ---
 
 ## Performance
 
-| Hardware | Time |
-|----------|------|
-| GPU (RTX 3090) | ~10-15s |
-| GPU (RTX 2060) | ~15-20s |
+| Hardware | Time per Image |
+|----------|----------------|
+| RTX 3090 | ~10-15s |
+| RTX 2060 | ~15-20s |
 | CPU | ~2-3min |
 
 ---
 
-## Testing Guide
+## Examples
 
-### 1. Test OCR Text Removal (Agent 4)
 ```bash
-python test_text_removal.py
-```
-Tests aggressive text remover with HuggingFace OCR models.
+# Movie poster
+python app_flux.py
+# Input: "space exploration adventure"
+# Type: Movie, Style: Cinematic
 
-### 2. Test Genre Text Styling (Agent 6)
-```bash
-python test_text_styles.py
-```
-Generates samples of all 9 genre-specific text overlay styles.
+# Event poster
+# Input: "summer music festival"
+# Type: Event, Style: Bright
 
-### 3. Test Full Pipeline with UI
-```bash
-python app_unified.py
-```
-Launches complete web interface with all 7 agents integrated.
-Open: **http://localhost:7860**
+# Social awareness
+# Input: "save the ocean"
+# Type: Social, Style: Minimalist
 
-### 4. Test End-to-End CLI Pipeline
-```bash
-# Test genre detection + LoRA + text overlay
-python run_pipeline.py "space exploration adventure" --genre-lora --add-title
-
-# Test with different genres
-python run_pipeline.py "dark horror mansion" --genre-lora --add-title
-python run_pipeline.py "romantic sunset beach" --genre-lora --add-title
+# Advertisement
+# Input: "fresh organic food"
+# Type: Advertise, Style: Professional
 ```
 
-### 5. Quick Component Verification
+---
+
+## Documentation
+
+- **FLUX_ENHANCEMENTS.md** - FLUX text generation details
+- **PROJECT_STRUCTURE.md** - Clean project structure
+- **requirements.txt** - Dependencies
+
+---
+
+## Models
+
+- **FLUX.1-schnell** - Fast text generation (4 steps, ~23GB)
+- **Stable Diffusion 1.5** - Baseline model
+- **Genre-specific LoRA** - Action, Horror, Sci-Fi, Romance, Comedy, Fantasy
+
+---
+
+## Testing
+
 ```bash
-# Test genre classifier
-python -c "from src.genre_classifier import GenreClassifier; gc = GenreClassifier(); print(gc.classify('dark horror mansion'))"
+# Test FLUX
+python test_flux.py
 
-# Test concept expander
-python -c "from src.concept_expander import ConceptExpander; ce = ConceptExpander(); print(ce.expand('cyberpunk city'))"
+# Test FLUX text generation
+python test_flux_text_generation.py
 
-# Verify text remover loaded
-python -c "from src.aggressive_text_remover import AggressiveTextRemover; print('✓ Text remover ready')"
+# Test enhancements
+python test_flux_enhanced.py
+
+# Full comparison
+python test_flux_text_generation_enhanced.py
 ```
-
-### Recommended Test Order
-1. **test_text_styles.py** - Verify genre text embeddings
-2. **test_text_removal.py** - Verify OCR removal works
-3. **app_unified.py** - Test full UI pipeline
-4. **run_pipeline.py** - Validate end-to-end with various genres
 
 ---
 
@@ -230,15 +220,13 @@ python -c "from src.aggressive_text_remover import AggressiveTextRemover; print(
 
 ```bash
 # Complete workflow
-python src/collect_data.py                    # Collect posters
-python preprocess_training_data.py            # Remove text
+python src/collect_data.py                           # Collect data
+python preprocess_training_data.py                   # Preprocess
 python src/train_lora.py --data-dir data/posters_clean  # Train
-python run_pipeline.py "keywords" --genre-lora --add-title  # Generate
+python app_flux.py                                   # Generate
 
-# Testing workflow
-python test_text_styles.py                    # Test text styling
-python test_text_removal.py                   # Test OCR removal
-python app_unified.py                         # Test full UI
+# Quick generation
+python app_flux.py  # Web UI
 ```
 
-**Result:** Professional posters with genre-matched styling! 🎨
+**Result:** Professional posters with FLUX text generation! 🎨
