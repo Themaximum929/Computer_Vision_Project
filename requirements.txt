@@ -29,3 +29,7 @@ pytesseract==0.3.13
 
 # Utilities
 huggingface-hub==0.36.0
+
+# Tokenizer dependencies
+sentencepiece>=0.2.0
+protobuf>=4.25.0

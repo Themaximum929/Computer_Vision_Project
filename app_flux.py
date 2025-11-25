@@ -2,6 +2,13 @@
 import gradio as gr
 from src.pipeline import Key2PosterPipeline
 import time
+from dotenv import load_dotenv
+import huggingface_hub
+import os
+
+load_dotenv()
+
+huggingface_hub.login(token=os.getenv("HF_TOKEN"))
 
 print("Loading FLUX pipeline...")
 pipeline = Key2PosterPipeline(
