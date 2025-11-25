@@ -24,7 +24,9 @@ outputs/
 # Data
 data/
 *.csv
-*.json
+
+# Release files
+release.json
 
 # IDE
 .vscode/

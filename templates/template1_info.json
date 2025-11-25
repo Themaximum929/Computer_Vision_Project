@@ -1,0 +1,19 @@
+{
+  "size": {
+    "width": 720,
+    "height": 1080
+  },
+  "layers": [
+    {
+      "name": "template1",
+      "type": "pixel",
+      "visible": true,
+      "bbox": [
+        0,
+        0,
+        720,
+        1080
+      ]
+    }
+  ]
+}

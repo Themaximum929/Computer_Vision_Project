@@ -1,0 +1,97 @@
+{
+  "size": [
+    720,
+    1080
+  ],
+  "layers": [
+    {
+      "name": "\u7528\u7d19",
+      "kind": "pixel",
+      "visible": true,
+      "bbox": [
+        0,
+        0,
+        720,
+        1080
+      ]
+    },
+    {
+      "name": "Background",
+      "kind": "group",
+      "visible": true,
+      "bbox": [
+        0,
+        0,
+        720,
+        1080
+      ]
+    },
+    {
+      "name": "Background1",
+      "kind": "pixel",
+      "visible": true,
+      "bbox": [
+        0,
+        0,
+        720,
+        1080
+      ]
+    },
+    {
+      "name": "Image",
+      "kind": "group",
+      "visible": true,
+      "bbox": [
+        54,
+        59,
+        655,
+        873
+      ]
+    },
+    {
+      "name": "Image1",
+      "kind": "pixel",
+      "visible": true,
+      "bbox": [
+        54,
+        59,
+        655,
+        873
+      ]
+    },
+    {
+      "name": "Text",
+      "kind": "group",
+      "visible": true,
+      "bbox": [
+        240,
+        930,
+        472,
+        989
+      ]
+    },
+    {
+      "name": "A Dance of Hearts  Under Stars",
+      "kind": "type",
+      "visible": false,
+      "bbox": [
+        240,
+        930,
+        472,
+        989
+      ],
+      "text": "A Dance of Hearts \rUnder Stars\r"
+    },
+    {
+      "name": "A Dance of Hearts  Under Stars",
+      "kind": "pixel",
+      "visible": true,
+      "bbox": [
+        240,
+        930,
+        472,
+        989
+      ]
+    }
+  ]
+}
