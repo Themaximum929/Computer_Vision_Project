@@ -7,18 +7,18 @@
     },
     {
       "name": "Image",
-      "bbox": [54, 59, 655, 873]
+      "bbox": [18, 23, 701, 765]
     },
     {
       "name": "Text",
-      "bbox": [240, 930, 472, 989]
+      "bbox": [167, 579, 561, 678]
     }
   ],
   "font": {
-    "family": "Graduate-Regular.ttf",
-    "size": 42,
-    "color": "#043bb4",
+    "family": "PlayfairDisplay-Regular.ttf",
+    "size": 60,
+    "color": "#9bd5e4",
     "align": "center"
   },
-  "background_color": "#faefcf"
+  "background_color": "#000000"
 }

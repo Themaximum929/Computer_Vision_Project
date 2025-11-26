@@ -155,12 +155,9 @@ class Key2PosterPipeline:
         else:
             poster_prompt = f"{brief['prompt']}, no text, no words, no letters"
         
-        # Generate image (FLUX will be resized to fit template)
-        image = self.generator.generate(poster_prompt, seed=seed)
-        
-        # Resize to fit template image region
-        image = image.resize(image_size, Image.Resampling.LANCZOS)
-        print(f"  ✓ Generated and resized to {image_size}")
+        # Generate image at template size
+        image = self.generator.generate(poster_prompt, seed=seed, width=image_size[0], height=image_size[1])
+        print(f"  ✓ Generated at {image_size}")
         
         # Step 5: Merge with template and add LLM-processed text
         print(f"\n[5/5] Composing final poster...")
@@ -169,7 +166,13 @@ class Key2PosterPipeline:
         from PIL import ImageDraw, ImageFont
         
         poster_size = tuple(template['size'])
-        poster = Image.new('RGB', poster_size, (250, 239, 207))  # Default bg color
+        bg_color_hex = template.get('background_color', '#faefcf')
+        if bg_color_hex.startswith('#'):
+            hex_color = bg_color_hex.lstrip('#')
+            bg_rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+        else:
+            bg_rgb = (250, 239, 207)
+        poster = Image.new('RGB', poster_size, bg_rgb)
         
         # Paste generated image into template
         if img_layer:
@@ -181,18 +184,72 @@ class Key2PosterPipeline:
         text_layer = next((l for l in template['layers'] if 'text' in l['name'].lower()), None)
         if text_layer:
             text_bbox = text_layer['bbox']
-            title = ' '.join(keyword_list[:3]).title()  # LLM will process this
+            title = ' '.join(keyword_list[:3]).title()
             
             draw = ImageDraw.Draw(poster)
+            
+            font_info = template.get('font', {})
+            font_family = font_info.get('family', 'Graduate-Regular.ttf')
+            font_size = font_info.get('size', 37)
+            font_color = font_info.get('color', '#043bb4')
+            font_align = font_info.get('align', 'center')
+            
             try:
-                font = ImageFont.truetype("fonts/Graduate-Regular.ttf", 37)
+                font = ImageFont.truetype(f"fonts/{font_family}", font_size)
             except:
                 font = ImageFont.load_default()
             
-            text_x = (text_bbox[0] + text_bbox[2]) // 2
+            if font_color.startswith('#'):
+                hex_color = font_color.lstrip('#')
+                rgb_color = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+            else:
+                rgb_color = (4, 59, 180)
+            
+            # Text wrapping
+            max_width = text_bbox[2] - text_bbox[0]
+            words = title.split()
+            lines = []
+            current_line = []
+            
+            for word in words:
+                test_line = ' '.join(current_line + [word])
+                bbox = draw.textbbox((0, 0), test_line, font=font)
+                if bbox[2] - bbox[0] <= max_width:
+                    current_line.append(word)
+                else:
+                    if current_line:
+                        lines.append(' '.join(current_line))
+                        current_line = [word]
+                    else:
+                        lines.append(word)
+            if current_line:
+                lines.append(' '.join(current_line))
+            
+            wrapped_text = '\n'.join(lines)
+            max_width = text_bbox[2] - text_bbox[0]
+            
             text_y = text_bbox[1]
-            draw.text((text_x, text_y), title, font=font, fill=(4, 59, 180), anchor='mt')
-            print(f"  ✓ Added text: '{title}'")
+            
+            if font_align == 'left':
+                draw.multiline_text((text_bbox[0], text_y), wrapped_text, font=font, fill=rgb_color, align='left')
+            elif font_align == 'right':
+                y_offset = text_y
+                for line in lines:
+                    bbox = draw.textbbox((0, 0), line, font=font)
+                    line_width = bbox[2] - bbox[0]
+                    text_x = text_bbox[2] - line_width
+                    draw.text((text_x, y_offset), line, font=font, fill=rgb_color)
+                    y_offset += bbox[3] - bbox[1] + 5
+            else:
+                y_offset = text_y
+                for line in lines:
+                    bbox = draw.textbbox((0, 0), line, font=font)
+                    line_width = bbox[2] - bbox[0]
+                    text_x = text_bbox[0] + (max_width - line_width) // 2
+                    draw.text((text_x, y_offset), line, font=font, fill=rgb_color)
+                    y_offset += bbox[3] - bbox[1] + 5
+            
+            print(f"  ✓ Added text at text_bbox with {font_family} size {font_size}")
         
         # Use composed poster as final image
         image = poster

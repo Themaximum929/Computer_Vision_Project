@@ -7,18 +7,18 @@
     },
     {
       "name": "Image",
-      "bbox": [54, 59, 655, 873]
+      "bbox": [0, 273, 720, 1080]
     },
     {
       "name": "Text",
-      "bbox": [240, 930, 472, 989]
+      "bbox": [133, 76, 689, 216]
     }
   ],
   "font": {
-    "family": "Graduate-Regular.ttf",
-    "size": 42,
-    "color": "#043bb4",
-    "align": "center"
+    "family": "Banshee-Regular.otf",
+    "size": 74,
+    "color": "#ffffff",
+    "align": "right"
   },
-  "background_color": "#faefcf"
+  "background_color": "#000000"
 }

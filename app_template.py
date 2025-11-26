@@ -45,33 +45,50 @@ def hex_to_rgb(color):
 
 
 
-def generate_with_template(keywords, seed):
+def generate_with_template(keywords, seed, template_num):
     try:
         keyword_list = [k.strip() for k in keywords.split() if k.strip()]
         if len(keyword_list) < 2 or len(keyword_list) > 5:
             return None, None, "❌ Provide 2-5 keywords"
         
-        # Pipeline now handles everything: template selection, FLUX generation, and composition
-        poster, brief, _ = pipeline.generate_poster(keywords, seed=seed if seed > 0 else None)
+        # Select template
+        if template_num == 0:
+            template = random.choice(templates)
+        else:
+            template_idx = int(template_num) - 1
+            if 0 <= template_idx < len(templates):
+                template = templates[template_idx]
+            else:
+                return None, None, f"❌ Template {template_num} not found (available: 1-{len(templates)})"
         
-        # Extract template from brief
-        template = brief.get('template', templates[0] if templates else {"size": [720, 1080], "layers": []})
+        # Generate FLUX image (no text) - pass template to pipeline
+        image, brief, _ = pipeline.generate_poster(keywords, seed=seed if seed > 0 else None, template=template)
         
-        # Store for editing (need to extract just the FLUX image from composed poster)
+        # Extract FLUX image from composed poster
         img_layer = next((l for l in template['layers'] if 'image' in l['name'].lower()), None)
         if img_layer:
             img_bbox = img_layer['bbox']
-            # Extract the FLUX-generated image from the composed poster
-            flux_image = poster.crop((img_bbox[0], img_bbox[1], img_bbox[2], img_bbox[3]))
-            poster_state["image"] = flux_image
+            flux_image = image.crop((img_bbox[0], img_bbox[1], img_bbox[2], img_bbox[3]))
         else:
-            poster_state["image"] = poster
+            flux_image = image
         
+        # Store for editing
+        poster_state["image"] = flux_image
         poster_state["title"] = " ".join(keyword_list[:3]).title()
         poster_state["template"] = template
         
-        template_idx = next((i for i, t in enumerate(templates) if t == template), 0)
-        info = f"✅ Generated\n\n**Title:** {poster_state['title']}\n**Template:** {template_idx+1}/{len(templates)}\n**Font:** Graduate-Regular (37px)\n**BG:** {poster_state['bg_color']}\n**Text:** {poster_state['text_color']}"
+        # Get template colors and update state
+        bg_color = template.get('background_color', '#faefcf')
+        font_info = template.get('font', {})
+        text_color = font_info.get('color', '#043bb4')
+        
+        poster_state['bg_color'] = bg_color
+        poster_state['text_color'] = text_color
+        
+        # Recompose with template colors
+        poster = compose_poster(flux_image, poster_state["title"], bg_color, text_color)
+        
+        info = f"✅ Generated\n\n**Title:** {poster_state['title']}\n**Template:** {templates.index(template)+1}/{len(templates)}\n**Font:** {font_info.get('family', 'Graduate-Regular.ttf')} ({font_info.get('size', 37)}px)\n**BG:** {bg_color}\n**Text:** {text_color}"
         
         return poster, poster, info
         
@@ -100,13 +117,61 @@ def compose_poster(image, title, bg_color, text_color):
     text_layer = next((l for l in template['layers'] if 'text' in l['name'].lower()), None)
     if text_layer:
         draw = ImageDraw.Draw(poster)
-        font = ImageFont.truetype("fonts/Graduate-Regular.ttf", 37)
+        font_info = template.get('font', {})
+        font_family = font_info.get('family', 'Graduate-Regular.ttf')
+        font_size = font_info.get('size', 37)
+        font_align = font_info.get('align', 'center')
+        
+        font = ImageFont.truetype(f"fonts/{font_family}", font_size)
         text_bbox = text_layer['bbox']
-        text_x = (text_bbox[0] + text_bbox[2]) // 2
+        
+        if font_align == 'left':
+            text_x = text_bbox[0]
+            anchor = 'lt'
+        else:
+            text_x = (text_bbox[0] + text_bbox[2]) // 2
+            anchor = 'mt'
+        
+        # Text wrapping
+        max_width = text_bbox[2] - text_bbox[0]
+        words = title.replace('\n', ' ').replace('\r', ' ').split()
+        lines = []
+        current_line = []
+        
+        for word in words:
+            test_line = ' '.join(current_line + [word])
+            bbox = draw.textbbox((0, 0), test_line, font=font)
+            if bbox[2] - bbox[0] <= max_width:
+                current_line.append(word)
+            else:
+                if current_line:
+                    lines.append(' '.join(current_line))
+                    current_line = [word]
+                else:
+                    lines.append(word)
+        if current_line:
+            lines.append(' '.join(current_line))
+        
         text_y = text_bbox[1]
         
-        title_single = title.replace('\n', ' ').replace('\r', ' ')
-        draw.text((text_x, text_y), title_single, font=font, fill=hex_to_rgb(text_color), anchor='mt')
+        if font_align == 'left':
+            draw.multiline_text((text_bbox[0], text_y), '\n'.join(lines), font=font, fill=hex_to_rgb(text_color), align='left')
+        elif font_align == 'right':
+            y_offset = text_y
+            for line in lines:
+                bbox = draw.textbbox((0, 0), line, font=font)
+                line_width = bbox[2] - bbox[0]
+                text_x = text_bbox[2] - line_width
+                draw.text((text_x, y_offset), line, font=font, fill=hex_to_rgb(text_color))
+                y_offset += bbox[3] - bbox[1] + 5
+        else:
+            y_offset = text_y
+            for line in lines:
+                bbox = draw.textbbox((0, 0), line, font=font)
+                line_width = bbox[2] - bbox[0]
+                text_x = text_bbox[0] + (max_width - line_width) // 2
+                draw.text((text_x, y_offset), line, font=font, fill=hex_to_rgb(text_color))
+                y_offset += bbox[3] - bbox[1] + 5
     
     return poster
 
@@ -278,6 +343,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
         with gr.Column(scale=1):
             gr.Markdown("### 1️⃣ Generate")
             keywords = gr.Textbox(label="Keywords (2-5 words)", placeholder="anime love story japanese")
+            template_num = gr.Number(label=f"Template (0=random, 1-{len(templates)})", value=0, precision=0)
             seed = gr.Number(label="Seed (0 = random)", value=0, precision=0)
             gen_btn = gr.Button("🎨 Generate Poster", variant="primary")
             
@@ -305,8 +371,11 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
                 - 💾 Click Export to download
                 """)
     
-    gen_btn.click(generate_with_template, [keywords, seed], [output_image, preview_image, status]).then(
-        lambda: poster_state.get("title", ""), None, title_input
+    def update_ui_colors():
+        return poster_state.get("title", ""), poster_state.get("bg_color", "#faefcf"), poster_state.get("text_color", "#043bb4")
+    
+    gen_btn.click(generate_with_template, [keywords, seed, template_num], [output_image, preview_image, status]).then(
+        update_ui_colors, None, [title_input, bg_color, text_color]
     )
     edit_btn.click(edit_poster, [title_input, bg_color, text_color], [output_image, status])
     def load_and_log():
@@ -320,8 +389,8 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     load_canvas_btn.click(load_and_log, None, canvas_html)
     
     gr.Examples(
-        [["anime love story japanese", 42], ["cyberpunk neon city", 123]],
-        [keywords, seed]
+        [["anime love story japanese", 0, 42], ["cyberpunk neon city", 1, 123]],
+        [keywords, template_num, seed]
     )
 
 if __name__ == "__main__":

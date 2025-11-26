@@ -7,18 +7,18 @@
     },
     {
       "name": "Image",
-      "bbox": [54, 59, 655, 873]
+      "bbox": [0, 0, 720, 1080]
     },
     {
       "name": "Text",
-      "bbox": [240, 930, 472, 989]
+      "bbox": [60, 183, 660, 331]
     }
   ],
   "font": {
-    "family": "Graduate-Regular.ttf",
-    "size": 42,
-    "color": "#043bb4",
+    "family": "Montserrat-Regular.ttf",
+    "size": 75,
+    "color": "#ffffff",
     "align": "center"
   },
-  "background_color": "#faefcf"
+  "background_color": "#ffffff"
 }
