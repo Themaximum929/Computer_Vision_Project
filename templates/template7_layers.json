@@ -7,43 +7,43 @@
     },
     {
       "name": "Image",
-      "bbox": [0, 0, 720, 1080]
+      "bbox": [71, 121, 639, 708]
     },
     {
       "name": "Title",
-      "bbox": [70, 153, 626, 293],
+      "bbox": [87, 788, 627, 837],
       "type": "title"
     },
     {
       "name": "Caption1",
-      "bbox": [73, 951, 629, 1001],
+      "bbox": [26, 936, 701, 982],
       "type": "caption"
     },
     {
       "name": "Caption2",
-      "bbox": [71, 822, 627, 872],
+      "bbox": [264, 1032, 480, 1070],
       "type": "caption"
     }
   ],
   "fonts": {
     "title": {
-      "family": "Montserrat-Regular.ttf",
-      "size": 75,
-      "color": "#ffffff",
+      "family": "DharmaGothicC-Heavy.ttf",
+      "size": 165,
+      "color": "#000000",
       "align": "center"
     },
     "caption": {
-      "family": "Montserrat-Regular.ttf",
-      "size": 55,
-      "color": "#ffffff",
+      "family": "NotoSansGeorgian_ExtraCondensed-Black.ttf",
+      "size": 22,
+      "color": "#000000",
       "align": "center"
     },
     "caption2": {
-      "family": "Montserrat-Regular.ttf",
-      "size": 55,
-      "color": "#ffffff",
+      "family": "NotoSansGeorgian_ExtraCondensed-Black.ttf",
+      "size": 22,
+      "color": "#000000",
       "align": "center"
     }
   },
-  "background_color": "#ffffff"
+  "background_color": "#ecf1f4"
 }

@@ -180,15 +180,58 @@ class Key2PosterPipeline:
             poster.paste(image, (img_bbox[0], img_bbox[1]))
             print(f"  ✓ Placed image at {img_bbox}")
         
-        # Add LLM-processed text
-        text_layer = next((l for l in template['layers'] if 'text' in l['name'].lower()), None)
-        if text_layer:
+        # Add LLM-processed text (support multiple text layers)
+        text_layers = [l for l in template['layers'] if 'text' in l['name'].lower() or 'title' in l['name'].lower() or 'caption' in l['name'].lower()]
+        print(f"  Found {len(text_layers)} text layers: {[l['name'] for l in text_layers]}")
+        
+        for idx, text_layer in enumerate(text_layers):
+            print(f"  Processing layer {idx}: {text_layer['name']}")
             text_bbox = text_layer['bbox']
-            title = ' '.join(keyword_list[:3]).title()
+            layer_type = text_layer.get('type', 'title')
+            
+            # Determine text content
+            layer_name_lower = text_layer['name'].lower()
+            if 'caption1' in layer_name_lower:
+                title = "COMING SOON"  # Fixed text for Caption1
+                print(f"    Caption1 text: {title}")
+            elif 'caption2' in layer_name_lower:
+                title = "2024"  # Fixed text for Caption2
+                print(f"    Caption2 text: {title}")
+            elif layer_type == 'title' or idx == 0:
+                title = ' '.join(keyword_list[:3]).title()
+                print(f"    Title text: {title}")
+            else:
+                title = "SUBTITLE"  # Default caption text
+                print(f"    Default text: {title}")
+            
+            # Character spacing for Caption1
+            if text_layer.get('spacing') == 'character':
+                # Add space between each character, and double space between words
+                spaced_chars = []
+                for char in title:
+                    if char == ' ':
+                        spaced_chars.append('  ')  # Double space for word separation
+                    else:
+                        spaced_chars.append(char + ' ')  # Single space after each character
+                title = ''.join(spaced_chars).strip()
+                print(f"    After character spacing: {title}")
             
             draw = ImageDraw.Draw(poster)
             
-            font_info = template.get('font', {})
+            # Get font for this layer
+            fonts_config = template.get('fonts', {})
+            layer_name_lower = text_layer['name'].lower()
+            
+            if 'caption2' in layer_name_lower:
+                font_info = fonts_config.get('caption2', {})
+                print(f"    Using caption2 font config: {font_info}")
+            elif 'caption1' in layer_name_lower or 'caption' in layer_name_lower:
+                font_info = fonts_config.get('caption', {})
+                print(f"    Using caption font config: {font_info}")
+            else:
+                font_info = fonts_config.get('title', template.get('font', {}))
+                print(f"    Using title font config: {font_info}")
+            
             font_family = font_info.get('family', 'Graduate-Regular.ttf')
             font_size = font_info.get('size', 37)
             font_color = font_info.get('color', '#043bb4')
@@ -249,7 +292,7 @@ class Key2PosterPipeline:
                     draw.text((text_x, y_offset), line, font=font, fill=rgb_color)
                     y_offset += bbox[3] - bbox[1] + 5
             
-            print(f"  ✓ Added text at text_bbox with {font_family} size {font_size}")
+            print(f"  ✓ Added {text_layer['name']}: '{title}' with {font_family} size {font_size} color {font_color} at {text_bbox}")
         
         # Use composed poster as final image
         image = poster

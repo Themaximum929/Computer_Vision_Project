@@ -10,15 +10,40 @@
       "bbox": [0, 273, 720, 1080]
     },
     {
-      "name": "Text",
-      "bbox": [133, 76, 689, 216]
+      "name": "Title",
+      "bbox": [133, 76, 689, 216],
+      "type": "title"
+    },
+    {
+      "name": "Caption1",
+      "bbox": [133, 337, 689, 387],
+      "type": "caption"
+    },
+    {
+      "name": "Caption2",
+      "bbox": [131, 425, 687, 475],
+      "type": "caption"
     }
   ],
-  "font": {
-    "family": "Banshee-Regular.otf",
-    "size": 74,
-    "color": "#ffffff",
-    "align": "right"
+  "fonts": {
+    "title": {
+      "family": "Banshee-Regular.otf",
+      "size": 74,
+      "color": "#ffffff",
+      "align": "right"
+    },
+    "caption": {
+      "family": "Banshee-Regular.otf",
+      "size": 54,
+      "color": "#ffffff",
+      "align": "right"
+    },
+    "caption2": {
+      "family": "Banshee-Regular.otf",
+      "size": 54,
+      "color": "#ffffff",
+      "align": "right"
+    }
   },
   "background_color": "#000000"
 }

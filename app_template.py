@@ -61,19 +61,11 @@ def generate_with_template(keywords, seed, template_num):
             else:
                 return None, None, f"❌ Template {template_num} not found (available: 1-{len(templates)})"
         
-        # Generate FLUX image (no text) - pass template to pipeline
-        image, brief, _ = pipeline.generate_poster(keywords, seed=seed if seed > 0 else None, template=template)
+        # Generate complete poster with template
+        poster, brief, _ = pipeline.generate_poster(keywords, seed=seed if seed > 0 else None, template=template)
         
-        # Extract FLUX image from composed poster
-        img_layer = next((l for l in template['layers'] if 'image' in l['name'].lower()), None)
-        if img_layer:
-            img_bbox = img_layer['bbox']
-            flux_image = image.crop((img_bbox[0], img_bbox[1], img_bbox[2], img_bbox[3]))
-        else:
-            flux_image = image
-        
-        # Store for editing
-        poster_state["image"] = flux_image
+        # Store poster for editing (don't crop, keep full poster with captions)
+        poster_state["image"] = poster
         poster_state["title"] = " ".join(keyword_list[:3]).title()
         poster_state["template"] = template
         
@@ -84,9 +76,6 @@ def generate_with_template(keywords, seed, template_num):
         
         poster_state['bg_color'] = bg_color
         poster_state['text_color'] = text_color
-        
-        # Recompose with template colors
-        poster = compose_poster(flux_image, poster_state["title"], bg_color, text_color)
         
         info = f"✅ Generated\n\n**Title:** {poster_state['title']}\n**Template:** {templates.index(template)+1}/{len(templates)}\n**Font:** {font_info.get('family', 'Graduate-Regular.ttf')} ({font_info.get('size', 37)}px)\n**BG:** {bg_color}\n**Text:** {text_color}"
         

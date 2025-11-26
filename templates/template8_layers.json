@@ -1,0 +1,27 @@
+{
+  "size": [720, 1080],
+  "layers": [
+    {
+      "name": "Background",
+      "bbox": [0, 0, 720, 1080]
+    },
+    {
+      "name": "Image",
+      "bbox": [0, 0, 720, 1080]
+    },
+    {
+      "name": "Title",
+      "bbox": [127, 88, 683, 228],
+      "type": "title"
+    }
+  ],
+  "fonts": {
+    "title": {
+      "family": "CormorantGaramond-SemiBold.ttf",
+      "size": 75,
+      "color": "#000000",
+      "align": "right"
+    }
+  },
+  "background_color": "#ffffff"
+}

@@ -7,32 +7,32 @@
     },
     {
       "name": "Image",
-      "bbox": [54, 59, 655, 873]
+      "bbox": [0, 0, 720, 1080]
     },
     {
       "name": "Title",
-      "bbox": [240, 930, 472, 989],
+      "bbox": [314, 639, 695, 779],
       "type": "title"
     },
     {
       "name": "Caption1",
-      "bbox": [112, 9, 606, 53],
+      "bbox": [314, 809, 623, 887],
       "type": "caption"
     }
   ],
   "fonts": {
     "title": {
-      "family": "Graduate-Regular.ttf",
-      "size": 42,
-      "color": "#043bb4",
-      "align": "center"
+      "family": "Lato-Bold.ttf",
+      "size": 200,
+      "color": "#ffffff",
+      "align": "right"
     },
     "caption": {
-      "family": "Graduate-Regular.ttf",
-      "size": 42,
+      "family": "Lato-Bold.ttf",
+      "size": 15,
       "color": "#ffffff",
-      "align": "center"
+      "align": "left"
     }
   },
-  "background_color": "#faefcf"
+  "background_color": "#000000"
 }

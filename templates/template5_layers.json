@@ -10,15 +10,40 @@
       "bbox": [0, 0, 720, 1080]
     },
     {
-      "name": "Text",
-      "bbox": [155, 317, 549, 416]
+      "name": "Title",
+      "bbox": [155, 317, 549, 416],
+      "type": "title"
+    },
+    {
+      "name": "Caption1",
+      "bbox": [154, 444, 548, 479],
+      "type": "caption"
+    },
+    {
+      "name": "Caption2",
+      "bbox": [153, 983, 547, 1018],
+      "type": "caption"
     }
   ],
-  "font": {
-    "family": "IBMPlexSerif-Regular.ttf",
-    "size": 70,
-    "color": "#404040",
-    "align": "center"
+  "fonts": {
+    "title": {
+      "family": "IBMPlexSerif-Regular.ttf",
+      "size": 70,
+      "color": "#404040",
+      "align": "center"
+    },
+    "caption": {
+      "family": "IBMPlexSerif-Regular.ttf",
+      "size": 55,
+      "color": "#404040",
+      "align": "center"
+    },
+    "caption2": {
+      "family": "IBMPlexSerif-Regular.ttf",
+      "size": 55,
+      "color": "#404040",
+      "align": "center"
+    }
   },
   "background_color": "#ffffff"
 }
