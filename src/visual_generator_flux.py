@@ -43,11 +43,10 @@ class VisualGeneratorFlux:
         if seed is not None:
             generator = generator.manual_seed(seed)
         
-        # Enhanced prompt for movie poster style - aggressive text suppression
-        enhanced_prompt = f"cinematic movie poster, {prompt}, dramatic lighting, professional photography, high quality, detailed, epic composition, vibrant colors, clean image without any text, no text, no words, no letters, no typography, no captions, no subtitles, no watermarks, text-free, wordless"
+        prompt = f'{prompt},never generate any kind of text'
         
         image = self.pipe(
-            enhanced_prompt,
+            prompt,
             width=width,
             height=height,
             num_inference_steps=num_inference_steps,
