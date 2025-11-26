@@ -9,9 +9,12 @@ import glob
 
 pipeline = Key2PosterPipeline(use_flux=True, add_title=False, genre_lora=False, remove_text=True, super_resolution=False, aggressive_text_removal=True)
 
-# Load all templates
+# Load all templates (sorted numerically)
+import re
 templates = []
-for template_file in glob.glob("templates/template*_layers.json"):
+template_files = glob.glob("templates/template*_layers.json")
+template_files.sort(key=lambda x: int(re.search(r'template(\d+)', x).group(1)))
+for template_file in template_files:
     with open(template_file) as f:
         templates.append(json.load(f))
 print(f"Loaded {len(templates)} templates")
@@ -169,14 +172,9 @@ def edit_poster(title, bg_color, text_color):
     if poster_state["image"] is None:
         return None, "❌ Generate poster first"
     
-    poster_state["title"] = title
-    poster_state["bg_color"] = bg_color
-    poster_state["text_color"] = text_color
-    
-    poster = compose_poster(poster_state["image"], title, bg_color, text_color)
-    info = f"✅ Updated\n\n**Title:** {title}\n**BG:** {bg_color}\n**Text:** {text_color}"
-    
-    return poster, info
+    # Since pipeline handles all text rendering, editing requires regeneration
+    # For now, just return the current poster
+    return poster_state["image"], "❌ Editing not supported yet - regenerate with new keywords instead"
 
 def load_to_canvas(image, title):
     """Load poster to Fabric.js canvas"""
