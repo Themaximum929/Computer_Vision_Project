@@ -7,6 +7,8 @@ from src.refiner import QualityRefiner
 from src.super_resolution import SuperResolution
 from src.text_remover import TextRemover
 from src.aggressive_text_remover import AggressiveTextRemover
+from src.color_contrast import get_average_color, adjust_text_color
+from src.text_layout import resolve_text_positions, calculate_text_bbox
 try:
     from src.enhanced_flux_text import EnhancedFluxText, StyleEnhancedFlux
     ENHANCED_FLUX_AVAILABLE = True
@@ -188,6 +190,10 @@ class Key2PosterPipeline:
         llm_title = brief.get('title', ' '.join(keyword_list[:3]).title())
         llm_captions = brief.get('captions', [])
         
+        # Prepare text elements for collision detection
+        text_elements = []
+        text_data = []
+        
         for idx, text_layer in enumerate(text_layers):
             print(f"  Processing layer {idx}: {text_layer['name']}")
             text_bbox = text_layer['bbox']
@@ -235,14 +241,24 @@ class Key2PosterPipeline:
             fonts_config = template.get('fonts', {})
             layer_name_lower = text_layer['name'].lower()
             
+            # Get title alignment for caption inheritance
+            title_font_info = fonts_config.get('title', template.get('font', {}))
+            title_align = title_font_info.get('align', 'center')
+            
             if 'caption2' in layer_name_lower:
                 font_info = fonts_config.get('caption2', {})
+                # Inherit title alignment if caption is center-aligned
+                if font_info.get('align', 'center') == 'center' and title_align == 'center':
+                    font_info['align'] = 'center'
                 print(f"    Using caption2 font config: {font_info}")
             elif 'caption1' in layer_name_lower or 'caption' in layer_name_lower:
                 font_info = fonts_config.get('caption', {})
+                # Inherit title alignment if caption is center-aligned
+                if font_info.get('align', 'center') == 'center' and title_align == 'center':
+                    font_info['align'] = 'center'
                 print(f"    Using caption font config: {font_info}")
             else:
-                font_info = fonts_config.get('title', template.get('font', {}))
+                font_info = title_font_info
                 print(f"    Using title font config: {font_info}")
             
             font_family = font_info.get('family', 'Graduate-Regular.ttf')
@@ -260,6 +276,12 @@ class Key2PosterPipeline:
                 rgb_color = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
             else:
                 rgb_color = (4, 59, 180)
+            
+            # Auto-adjust text color for contrast
+            print(f"    Original text color: {rgb_color}")
+            bg_avg_color = get_average_color(poster, text_bbox)
+            rgb_color = adjust_text_color(bg_avg_color, rgb_color)
+            print(f"    Final text color: {rgb_color}")
             
             # Text wrapping
             max_width = text_bbox[2] - text_bbox[0]
@@ -281,31 +303,67 @@ class Key2PosterPipeline:
             if current_line:
                 lines.append(' '.join(current_line))
             
-            wrapped_text = '\n'.join(lines)
-            max_width = text_bbox[2] - text_bbox[0]
+            # Calculate actual text bbox
+            actual_bbox = calculate_text_bbox(text_bbox, lines, font, draw)
+            priority = 1 if 'title' in text_layer['name'].lower() else 0
             
-            text_y = text_bbox[1]
+            text_elements.append({
+                'bbox': actual_bbox,
+                'name': text_layer['name'],
+                'priority': priority
+            })
+            
+            text_data.append({
+                'lines': lines,
+                'font': font,
+                'rgb_color': rgb_color,
+                'font_align': font_align,
+                'original_bbox': text_bbox,
+                'title': title,
+                'font_family': font_family,
+                'font_size': font_size,
+                'font_color': font_color
+            })
+        
+        # Resolve collisions
+        print(f"  Checking text layout collisions...")
+        adjusted_elements = resolve_text_positions(text_elements, poster_size, img_bbox if img_layer else None)
+        
+        # Render text with adjusted positions
+        poster_center_x = poster_size[0] // 2
+        
+        for idx, elem in enumerate(adjusted_elements):
+            data = text_data[idx]
+            adjusted_bbox = elem['bbox']
+            lines = data['lines']
+            font = data['font']
+            rgb_color = data['rgb_color']
+            font_align = data['font_align']
+            original_bbox = data['original_bbox']
+            
+            text_y = adjusted_bbox[1]
             
             if font_align == 'left':
-                draw.multiline_text((text_bbox[0], text_y), wrapped_text, font=font, fill=rgb_color, align='left')
+                draw.multiline_text((adjusted_bbox[0], text_y), '\n'.join(lines), font=font, fill=rgb_color, align='left')
             elif font_align == 'right':
                 y_offset = text_y
                 for line in lines:
                     bbox = draw.textbbox((0, 0), line, font=font)
                     line_width = bbox[2] - bbox[0]
-                    text_x = text_bbox[2] - line_width
+                    text_x = adjusted_bbox[2] - line_width
                     draw.text((text_x, y_offset), line, font=font, fill=rgb_color)
                     y_offset += bbox[3] - bbox[1] + 5
             else:
+                # Center align relative to poster center
                 y_offset = text_y
                 for line in lines:
                     bbox = draw.textbbox((0, 0), line, font=font)
                     line_width = bbox[2] - bbox[0]
-                    text_x = text_bbox[0] + (max_width - line_width) // 2
+                    text_x = poster_center_x - (line_width // 2)
                     draw.text((text_x, y_offset), line, font=font, fill=rgb_color)
                     y_offset += bbox[3] - bbox[1] + 5
             
-            print(f"  ✓ Added {text_layer['name']}: '{title}' with {font_family} size {font_size} color {font_color} at {text_bbox}")
+            print(f"  ✓ Added {elem['name']}: '{data['title']}' at {adjusted_bbox}")
         
         # Use composed poster as final image
         image = poster

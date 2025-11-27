@@ -1,6 +1,7 @@
 """Template-based Poster Generator"""
 import gradio as gr
 from src.pipeline import Key2PosterPipeline
+from src.color_contrast import get_average_color, adjust_text_color
 from PIL import Image, ImageDraw, ImageFont
 import json
 import time
@@ -134,6 +135,13 @@ def compose_poster(image, title, bg_color, text_color):
             text_x = (text_bbox[0] + text_bbox[2]) // 2
             anchor = 'mt'
         
+        # Auto-adjust text color for contrast
+        print(f"  Original text color: {hex_to_rgb(text_color)}")
+        bg_avg_color = get_average_color(poster, text_bbox)
+        text_rgb = hex_to_rgb(text_color)
+        text_rgb = adjust_text_color(bg_avg_color, text_rgb)
+        print(f"  Final text color: {text_rgb}")
+        
         # Text wrapping
         max_width = text_bbox[2] - text_bbox[0]
         words = title.replace('\n', ' ').replace('\r', ' ').split()
@@ -157,14 +165,14 @@ def compose_poster(image, title, bg_color, text_color):
         text_y = text_bbox[1]
         
         if font_align == 'left':
-            draw.multiline_text((text_bbox[0], text_y), '\n'.join(lines), font=font, fill=hex_to_rgb(text_color), align='left')
+            draw.multiline_text((text_bbox[0], text_y), '\n'.join(lines), font=font, fill=text_rgb, align='left')
         elif font_align == 'right':
             y_offset = text_y
             for line in lines:
                 bbox = draw.textbbox((0, 0), line, font=font)
                 line_width = bbox[2] - bbox[0]
                 text_x = text_bbox[2] - line_width
-                draw.text((text_x, y_offset), line, font=font, fill=hex_to_rgb(text_color))
+                draw.text((text_x, y_offset), line, font=font, fill=text_rgb)
                 y_offset += bbox[3] - bbox[1] + 5
         else:
             y_offset = text_y
@@ -172,7 +180,7 @@ def compose_poster(image, title, bg_color, text_color):
                 bbox = draw.textbbox((0, 0), line, font=font)
                 line_width = bbox[2] - bbox[0]
                 text_x = text_bbox[0] + (max_width - line_width) // 2
-                draw.text((text_x, y_offset), line, font=font, fill=hex_to_rgb(text_color))
+                draw.text((text_x, y_offset), line, font=font, fill=text_rgb)
                 y_offset += bbox[3] - bbox[1] + 5
     
     return poster
