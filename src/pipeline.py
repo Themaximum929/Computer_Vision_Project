@@ -158,8 +158,11 @@ class Key2PosterPipeline:
             poster_prompt = f"{brief['prompt']}, no text, no words, no letters"
         
         # Generate image at template size
-        image = self.generator.generate(poster_prompt, seed=seed, width=image_size[0], height=image_size[1])
+        flux_image = self.generator.generate(poster_prompt, seed=seed, width=image_size[0], height=image_size[1])
         print(f"  ✓ Generated at {image_size}")
+        
+        # Store FLUX image in brief for canvas editing
+        brief['flux_image'] = flux_image
         
         # Step 5: Merge with template and add LLM-processed text
         print(f"\n[5/5] Composing final poster...")
@@ -179,7 +182,7 @@ class Key2PosterPipeline:
         # Paste generated image into template
         if img_layer:
             img_bbox = img_layer['bbox']
-            poster.paste(image, (img_bbox[0], img_bbox[1]))
+            poster.paste(flux_image, (img_bbox[0], img_bbox[1]))
             print(f"  ✓ Placed image at {img_bbox}")
         
         # Add LLM-processed text (support multiple text layers)
