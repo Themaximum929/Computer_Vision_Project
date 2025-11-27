@@ -385,8 +385,19 @@ class Key2PosterPipeline:
         elapsed = time.time() - start_time
         print(f"\n✅ Poster saved to {output_path} ({elapsed:.1f}s)")
         
-        # Return template info in brief
+        # Store rendered text info for editing
         brief['template'] = template
+        brief['rendered_texts'] = []
+        for idx, elem in enumerate(adjusted_elements):
+            data = text_data[idx]
+            brief['rendered_texts'].append({
+                'text': '\n'.join(data['lines']),
+                'bbox': elem['bbox'],
+                'color': '#{:02x}{:02x}{:02x}'.format(*data['rgb_color']),
+                'size': data['font_size'],
+                'family': data['font_family'],
+                'align': data['font_align']
+            })
         
         return image, brief, metrics
     

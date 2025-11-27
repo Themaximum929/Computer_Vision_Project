@@ -21,7 +21,7 @@ for template_file in template_files:
 print(f"Loaded {len(templates)} templates")
 
 # Store current poster state
-poster_state = {"image": None, "flux_image": None, "title": "", "bg_color": "#faefcf", "text_color": "#043bb4", "template": None}
+poster_state = {"image": None, "flux_image": None, "title": "", "bg_color": "#faefcf", "text_color": "#043bb4", "template": None, "fonts": {}}
 
 def hex_to_rgb(color):
     """Convert color to RGB tuple"""
@@ -74,6 +74,7 @@ def generate_with_template(keywords, seed, template_num):
         poster_state["title"] = brief.get('title', " ".join(keyword_list[:3]).title())
         poster_state["captions"] = brief.get('captions', [])
         poster_state["template"] = template
+        poster_state["rendered_texts"] = brief.get('rendered_texts', [])
         
         print(f"\n=== Poster State Debug ===")
         print(f"flux_image exists: {poster_state['flux_image'] is not None}")
@@ -86,7 +87,7 @@ def generate_with_template(keywords, seed, template_num):
         text_color = font_info.get('color', '#043bb4')
         
         poster_state['bg_color'] = bg_color
-        poster_state['text_color'] = text_color
+        poster_state['fonts'] = template.get('fonts', {})
         
         # Display LLM results
         captions_text = "\n".join([f"  {i+1}. {cap}" for i, cap in enumerate(poster_state['captions'])]) if poster_state['captions'] else "  None"
@@ -203,7 +204,7 @@ def edit_poster(title, bg_color, text_color):
 def apply_text_edits(title_text, title_x, title_y, title_size, title_color, 
                      caption1_text, caption1_x, caption1_y, caption1_size, caption1_color,
                      caption2_text, caption2_x, caption2_y, caption2_size, caption2_color):
-    """Apply text edits and regenerate poster"""
+    """Apply text edits - sliders control center position"""
     if poster_state["image"] is None:
         return None, None, None
     
@@ -218,7 +219,6 @@ def apply_text_edits(title_text, title_x, title_y, title_size, title_color,
     bg_rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
     poster = Image.new('RGB', poster_size, bg_rgb)
     
-    # Paste FLUX image
     img_layer = next((l for l in template['layers'] if 'image' in l['name'].lower()), None)
     if img_layer:
         img_bbox = img_layer['bbox']
@@ -226,226 +226,76 @@ def apply_text_edits(title_text, title_x, title_y, title_size, title_color,
     
     draw = ImageDraw.Draw(poster)
     
-    # Draw texts
     texts = [
         (title_text, title_x, title_y, title_size, title_color),
         (caption1_text, caption1_x, caption1_y, caption1_size, caption1_color),
         (caption2_text, caption2_x, caption2_y, caption2_size, caption2_color)
     ]
     
-    for text, center_x, center_y, size, color in texts:
+    fonts_config = poster_state.get('fonts', {})
+    font_names = ['title', 'caption', 'caption2']
+    text_layers = [l for l in template['layers'] if 'text' in l['name'].lower() or 'title' in l['name'].lower() or 'caption' in l['name'].lower()]
+    
+    for idx, (text, center_x, center_y, size, color) in enumerate(texts):
         if text.strip():
+            font_info = fonts_config.get(font_names[idx], {})
+            font_family = font_info.get('family', 'Graduate-Regular.ttf')
+            align = font_info.get('align', 'center')
+            
             try:
-                font = ImageFont.truetype("fonts/Graduate-Regular.ttf", int(size))
+                font = ImageFont.truetype(f"fonts/{font_family}", int(size))
             except:
                 font = ImageFont.load_default()
             
-            hex_color = color.lstrip('#')
-            rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+            if isinstance(color, str) and color.startswith('#'):
+                hex_color = color.lstrip('#')
+                rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4)) if len(hex_color) == 6 else (0, 0, 0)
+            elif isinstance(color, dict):
+                rgb = (int(color.get('r', 0)), int(color.get('g', 0)), int(color.get('b', 0)))
+            else:
+                rgb = (0, 0, 0)
             
-            # Handle multi-line text
-            lines = text.split('\n')
+            text = text.replace('\\n', '\n')
             
-            # Calculate total text bbox
-            max_width = 0
-            total_height = 0
-            for line in lines:
-                line_bbox = draw.textbbox((0, 0), line, font=font)
-                line_width = line_bbox[2] - line_bbox[0]
-                line_height = line_bbox[3] - line_bbox[1]
-                max_width = max(max_width, line_width)
-                total_height += line_height
+            # Calculate text bbox to convert center to top-left
+            bbox = draw.multiline_textbbox((0, 0), text, font=font)
+            text_width = bbox[2] - bbox[0]
+            text_height = bbox[3] - bbox[1]
             
-            # Convert center position to top-left corner
-            x = int(center_x) - max_width // 2
-            y = int(center_y) - total_height // 2
+            # Convert center position to top-left based on alignment
+            if align == 'left':
+                x = int(center_x)
+                y = int(center_y) - text_height // 2
+            elif align == 'right':
+                x = int(center_x) - text_width
+                y = int(center_y) - text_height // 2
+            else:  # center
+                x = int(center_x) - text_width // 2
+                y = int(center_y) - text_height // 2
             
-            draw.multiline_text((x, y), text, font=font, fill=rgb, align='center')
+            draw.multiline_text((x, y), text, font=font, fill=rgb, align=align)
     
     poster_state["image"] = poster
     return poster, poster, poster
 
 def get_text_defaults():
-    """Get default text values from poster state"""
-    template = poster_state.get("template") or templates[0]
-    text_layers = [l for l in template['layers'] if 'text' in l['name'].lower() or 'title' in l['name'].lower() or 'caption' in l['name'].lower()]
-    fonts_config = template.get('fonts', {})
-    
-    texts = [poster_state.get('title', '')] + poster_state.get('captions', [])
+    """Get default text values from rendered poster"""
+    rendered_texts = poster_state.get('rendered_texts', [])
     defaults = []
     
     for idx in range(3):
-        if idx < len(text_layers) and idx < len(texts):
-            layer = text_layers[idx]
-            text = texts[idx]
-            bbox = layer['bbox']
-            layer_name = layer['name'].lower()
-            
-            if 'caption2' in layer_name:
-                font_info = fonts_config.get('caption2', {})
-            elif 'caption' in layer_name:
-                font_info = fonts_config.get('caption', {})
-            else:
-                font_info = fonts_config.get('title', {})
-            
-            # Convert top-left to center position
+        if idx < len(rendered_texts):
+            rendered = rendered_texts[idx]
+            bbox = rendered['bbox']
+            # Return center position for intuitive slider control
             center_x = (bbox[0] + bbox[2]) // 2
             center_y = (bbox[1] + bbox[3]) // 2
-            defaults.append((text, center_x, center_y, font_info.get('size', 37), font_info.get('color', '#043bb4')))
+            text_display = rendered['text'].replace('\n', '\\n')
+            defaults.append((text_display, center_x, center_y, rendered['size'], rendered['color']))
         else:
-            defaults.append(('', 100, 100 + idx * 100, 37, '#043bb4'))
+            defaults.append(('', 360, 900 + idx * 50, 37, '#043bb4'))
     
     return defaults
-
-def load_to_canvas(image, title):
-    """Load poster to Fabric.js canvas"""
-    if poster_state["image"] is None:
-        return "<p style='color:red;font-size:20px;padding:50px'>❌ Generate poster first!</p>"
-    
-    # Use FLUX image if available, otherwise use full poster
-    canvas_image = poster_state.get("flux_image") or poster_state["image"]
-    
-    import base64
-    from io import BytesIO
-    
-    template = poster_state.get("template") or templates[0]
-    img_layer = next((l for l in template['layers'] if 'image' in l['name'].lower()), None)
-    text_layers = [l for l in template['layers'] if 'text' in l['name'].lower() or 'title' in l['name'].lower() or 'caption' in l['name'].lower()]
-    
-    img_bbox = img_layer['bbox'] if img_layer else [0, 0, 720, 1080]
-    
-    print(f"Loading canvas with title: {poster_state['title']}")
-    print(f"Canvas image size: {canvas_image.size}")
-    print(f"Found {len(text_layers)} text layers")
-    
-    # Save image as base64
-    buffered = BytesIO()
-    canvas_image.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue()).decode()
-    print(f"Base64 length: {len(img_str)}")
-    
-    # Generate text layers JavaScript
-    text_layers_js = _generate_text_layers_js()
-    
-    html = f"""
-    <div style="text-align:center;padding:20px">
-        <div style="margin-bottom:10px;color:#666;font-weight:bold">Click elements to select • Drag to move • Drag corners to resize • Double-click text to edit</div>
-        <div id="status" style="margin-bottom:10px;color:#2196F3">Initializing...</div>
-        <canvas id="posterCanvas" width="720" height="1080" style="border:2px solid #333;background:#faefcf"></canvas>
-        <br>
-        <button onclick="exportCanvas()" style="margin:10px;padding:10px 20px;background:#4CAF50;color:white;border:none;cursor:pointer;border-radius:5px">💾 Export PNG</button>
-        <button onclick="deleteSelected()" style="margin:10px;padding:10px 20px;background:#f44336;color:white;border:none;cursor:pointer;border-radius:5px">🗑️ Delete Selected</button>
-        <button onclick="bringToFront()" style="margin:10px;padding:10px 20px;background:#2196F3;color:white;border:none;cursor:pointer;border-radius:5px">⬆️ Bring to Front</button>
-    </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
-    <script>
-        document.getElementById('status').innerText = 'Script loaded';
-        document.getElementById('status').style.color = 'orange';
-        console.log('Script executing...');
-        
-        // Wait for Fabric.js to load
-        if(typeof fabric === 'undefined') {{
-            document.getElementById('status').innerText = '❌ Fabric.js not loaded';
-            document.getElementById('status').style.color = 'red';
-            console.error('Fabric.js not available');
-        }} else {{
-            document.getElementById('status').innerText = 'Fabric.js loaded';
-            console.log('Fabric.js version:', fabric.version);
-            
-            if(window.posterCanvas) {{
-                window.posterCanvas.dispose();
-            }}
-            
-            window.posterCanvas = new fabric.Canvas('posterCanvas');
-            var canvas = window.posterCanvas;
-        
-        // Set background color
-        canvas.backgroundColor = '{poster_state["bg_color"]}';
-        canvas.renderAll();
-        document.getElementById('status').innerText = 'Background loaded';
-        console.log('Background set to {poster_state["bg_color"]}');
-        
-        // Load FLUX image
-        var imgElement = new Image();
-        imgElement.crossOrigin = 'anonymous';
-        
-        imgElement.onload = function() {{
-            document.getElementById('status').innerText = 'Image loaded, adding to canvas...';
-            console.log('Image dimensions:', imgElement.width, 'x', imgElement.height);
-            
-            var fabricImg = new fabric.Image(imgElement, {{
-                left: {img_bbox[0]},
-                top: {img_bbox[1]},
-                selectable: true,
-                hasControls: true,
-                hasBorders: true,
-                borderColor: 'blue',
-                cornerColor: 'blue',
-                cornerSize: 10
-            }});
-            
-            // Scale to fit
-            fabricImg.scaleToWidth({img_bbox[2] - img_bbox[0]});
-            canvas.add(fabricImg);
-            canvas.renderAll();
-            
-            document.getElementById('status').innerText = 'Image added! Adding text...';
-            console.log('Image added, objects count:', canvas.getObjects().length);
-            
-            // Add all text layers
-            {text_layers_js}
-            
-            document.getElementById('status').innerText = '✅ Ready! Click elements to edit';
-            document.getElementById('status').style.color = 'green';
-            console.log('All elements added, total objects:', canvas.getObjects().length);
-        }};
-        
-        imgElement.onerror = function(e) {{
-            document.getElementById('status').innerText = '❌ Failed to load image';
-            document.getElementById('status').style.color = 'red';
-            console.error('Image load error:', e);
-        }};
-        
-        console.log('Starting image load...');
-        imgElement.src = 'data:image/png;base64,{img_str}';
-        
-        function exportCanvas() {{
-            var dataURL = canvas.toDataURL({{format: 'png', quality: 1}});
-            var link = document.createElement('a');
-            link.download = 'poster_edited_' + Date.now() + '.png';
-            link.href = dataURL;
-            link.click();
-        }}
-        
-        function deleteSelected() {{
-            var active = canvas.getActiveObject();
-            if(active) {{
-                canvas.remove(active);
-                canvas.renderAll();
-            }} else {{
-                alert('Select an element first');
-            }}
-        }}
-        
-        function bringToFront() {{
-            var active = canvas.getActiveObject();
-            if(active) {{
-                canvas.bringToFront(active);
-                canvas.renderAll();
-            }}
-        }}
-        
-        // Debug info
-        setTimeout(function() {{
-            console.log('Final canvas state:');
-            console.log('- Objects:', canvas.getObjects().length);
-            console.log('- Background:', canvas.backgroundColor);
-            console.log('- Size:', canvas.width, 'x', canvas.height);
-        }}, 2000);
-        }}
-    </script>
-    """
-    return html
 
 with gr.Blocks(theme=gr.themes.Soft()) as demo:
     gr.Markdown("# 🎨 Adobe-like Poster Editor\nGenerate → Drag & Edit → Export")
@@ -478,7 +328,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
                         title_text = gr.Textbox(label="Text (use \\n for line break)", value="", lines=3)
                         title_x = gr.Slider(0, 720, label="X Center", value=360)
                         title_y = gr.Slider(0, 1080, label="Y Center", value=900)
-                        title_size = gr.Slider(10, 100, label="Font Size", value=37, step=1)
+                        title_size = gr.Slider(10, 200, label="Font Size", value=37, step=1)
                         title_color = gr.ColorPicker(label="Color", value="#043bb4")
             
             with gr.Tab("Caption 1"):
@@ -488,7 +338,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
                         caption1_text = gr.Textbox(label="Text (use \\n for line break)", value="", lines=3)
                         caption1_x = gr.Slider(0, 720, label="X Center", value=360)
                         caption1_y = gr.Slider(0, 1080, label="Y Center", value=950)
-                        caption1_size = gr.Slider(10, 100, label="Font Size", value=20, step=1)
+                        caption1_size = gr.Slider(10, 200, label="Font Size", value=20, step=1)
                         caption1_color = gr.ColorPicker(label="Color", value="#043bb4")
             
             with gr.Tab("Caption 2"):
@@ -498,7 +348,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
                         caption2_text = gr.Textbox(label="Text (use \\n for line break)", value="", lines=3)
                         caption2_x = gr.Slider(0, 720, label="X Center", value=360)
                         caption2_y = gr.Slider(0, 1080, label="Y Center", value=1000)
-                        caption2_size = gr.Slider(10, 100, label="Font Size", value=20, step=1)
+                        caption2_size = gr.Slider(10, 200, label="Font Size", value=20, step=1)
                         caption2_color = gr.ColorPicker(label="Color", value="#043bb4")
     
     def update_ui_colors():
@@ -512,14 +362,23 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
         defaults = get_text_defaults()
         return defaults[0] + defaults[1] + defaults[2]
     
+    def load_and_render():
+        defaults = get_text_defaults()
+        # Immediately render with correct positions
+        result = apply_text_edits(
+            defaults[0][0], defaults[0][1], defaults[0][2], defaults[0][3], defaults[0][4],
+            defaults[1][0], defaults[1][1], defaults[1][2], defaults[1][3], defaults[1][4],
+            defaults[2][0], defaults[2][1], defaults[2][2], defaults[2][3], defaults[2][4]
+        )
+        return defaults[0] + defaults[1] + defaults[2] + result
+    
     gen_btn.click(generate_with_template, [keywords, seed, template_num], [preview_image, output_image, status]).then(
-        lambda img: (img, img, img), output_image, [output_image2, output_image3]
-    ).then(
         update_ui_colors, None, [title_input, bg_color, text_color]
     ).then(
-        load_defaults, None, [title_text, title_x, title_y, title_size, title_color,
-                              caption1_text, caption1_x, caption1_y, caption1_size, caption1_color,
-                              caption2_text, caption2_x, caption2_y, caption2_size, caption2_color]
+        load_and_render, None, [title_text, title_x, title_y, title_size, title_color,
+                                caption1_text, caption1_x, caption1_y, caption1_size, caption1_color,
+                                caption2_text, caption2_x, caption2_y, caption2_size, caption2_color,
+                                output_image, output_image2, output_image3]
     )
     
     edit_btn.click(edit_poster, [title_input, bg_color, text_color], [preview_image, status])
