@@ -117,11 +117,11 @@ class Key2PosterPipeline:
         
         # Step 2: Expand concepts (TODO: Enhancement by teammates)
         print(f"\n[2/5] Expanding concepts for: '{keywords}'")
-        brief = self.expander.expand(keywords)
-        print(f"  Sentiment: {brief['sentiment']} (confidence: {brief['confidence']:.2f})")
-        print(f"  Mood: {brief['mood']}")
-        print(f"  Enhanced prompt: {brief['prompt']}")
-        print(f"  TODO: Advanced prompt enhancement (teammates will implement)")
+        brief = self.expander.expand(keywords, poster_type=self.poster_type, paint_style=self.style_preset, img_size=image_size)
+        print(f"Advanced prompt enhancement")
+        print(f"  Description: {brief['description']}")
+        print(f"  Story title: {brief['story title']}")
+        print(f"  Captions: {brief['captions']}")
         
         # Step 3: Classify genre and load appropriate LoRA
         if self.genre_lora and self.genre_classifier:
@@ -151,12 +151,12 @@ class Key2PosterPipeline:
         print(f"  Target size: {image_size}")
         
         if self.use_lora or self.genre_lora:
-            poster_prompt = f"movie poster art, {brief['themes']}, visual composition, no text"
+            poster_prompt = f"movie poster art, {brief['description']}, visual composition, no text"
         else:
-            poster_prompt = f"{brief['prompt']}, no text, no words, no letters"
+            poster_prompt = f"{brief['description']}, no text, no words, no letters"
         
         # Generate image (FLUX will be resized to fit template)
-        image = self.generator.generate(poster_prompt, seed=seed)
+        image = self.generator.generate(poster_prompt, width=image_size[0], height=image_size[1], seed=seed)
         
         # Resize to fit template image region
         image = image.resize(image_size, Image.Resampling.LANCZOS)
@@ -181,7 +181,7 @@ class Key2PosterPipeline:
         text_layer = next((l for l in template['layers'] if 'text' in l['name'].lower()), None)
         if text_layer:
             text_bbox = text_layer['bbox']
-            title = ' '.join(keyword_list[:3]).title()  # LLM will process this
+            title = brief['story title']
             
             draw = ImageDraw.Draw(poster)
             try:
@@ -229,5 +229,5 @@ class Key2PosterPipeline:
 
 if __name__ == "__main__":
     # Test baseline
-    pipeline = Key2PosterPipeline(use_lora=False)
+    pipeline = Key2PosterPipeline(use_lora=False, remove_text=False, super_resolution=False, add_title=False, use_flux=True, poster_type="movie", style_preset="digital watercolor")
     pipeline.generate_poster("space exploration adventure")
