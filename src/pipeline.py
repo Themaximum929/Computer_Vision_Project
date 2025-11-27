@@ -117,11 +117,11 @@ class Key2PosterPipeline:
         
         # Step 2: Expand concepts (TODO: Enhancement by teammates)
         print(f"\n[2/5] Expanding concepts for: '{keywords}'")
-        brief = self.expander.expand(keywords)
-        print(f"  Sentiment: {brief['sentiment']} (confidence: {brief['confidence']:.2f})")
-        print(f"  Mood: {brief['mood']}")
+        brief = self.expander.expand(keywords, image_size=image_size)
+        print(f"  Title: {brief.get('title', 'N/A')}")
+        print(f"  Captions: {brief.get('captions', [])}")
         print(f"  Enhanced prompt: {brief['prompt']}")
-        print(f"  TODO: Advanced prompt enhancement (teammates will implement)")
+        print(f"  Sentiment: {brief['sentiment']} (confidence: {brief['confidence']:.2f})")
         
         # Step 3: Classify genre and load appropriate LoRA
         if self.genre_lora and self.genre_classifier:
@@ -184,24 +184,37 @@ class Key2PosterPipeline:
         text_layers = [l for l in template['layers'] if 'text' in l['name'].lower() or 'title' in l['name'].lower() or 'caption' in l['name'].lower()]
         print(f"  Found {len(text_layers)} text layers: {[l['name'] for l in text_layers]}")
         
+        # Get title and captions from LLM
+        llm_title = brief.get('title', ' '.join(keyword_list[:3]).title())
+        llm_captions = brief.get('captions', [])
+        
         for idx, text_layer in enumerate(text_layers):
             print(f"  Processing layer {idx}: {text_layer['name']}")
             text_bbox = text_layer['bbox']
             layer_type = text_layer.get('type', 'title')
             
-            # Determine text content
+            # Determine text content from LLM output
             layer_name_lower = text_layer['name'].lower()
-            if 'caption1' in layer_name_lower:
-                title = "COMING SOON"  # Fixed text for Caption1
-                print(f"    Caption1 text: {title}")
-            elif 'caption2' in layer_name_lower:
-                title = "2024"  # Fixed text for Caption2
-                print(f"    Caption2 text: {title}")
-            elif layer_type == 'title' or idx == 0:
-                title = ' '.join(keyword_list[:3]).title()
-                print(f"    Title text: {title}")
+            if 'title' in layer_name_lower or idx == 0:
+                title = llm_title
+                print(f"    Title text (from LLM): {title}")
+            elif 'caption' in layer_name_lower:
+                # Extract caption number (e.g., caption1 -> 0, caption2 -> 1)
+                import re
+                caption_num = re.findall(r'\d+', layer_name_lower)
+                if caption_num:
+                    caption_idx = int(caption_num[0]) - 1
+                    if 0 <= caption_idx < len(llm_captions):
+                        title = llm_captions[caption_idx]
+                        print(f"    Caption{caption_idx+1} text (from LLM): {title}")
+                    else:
+                        title = llm_captions[0] if llm_captions else "COMING SOON"
+                        print(f"    Caption fallback: {title}")
+                else:
+                    title = llm_captions[0] if llm_captions else "COMING SOON"
+                    print(f"    Caption default: {title}")
             else:
-                title = "SUBTITLE"  # Default caption text
+                title = llm_captions[idx-1] if idx-1 < len(llm_captions) else "SUBTITLE"
                 print(f"    Default text: {title}")
             
             # Character spacing for Caption1

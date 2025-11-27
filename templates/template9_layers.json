@@ -28,19 +28,19 @@
   "fonts": {
     "title": {
       "family": "SourceHanSerif-Heavy.otf",
-      "size": 200,
+      "size": 70,
       "color": "#ffffff",
       "align": "center"
     },
     "caption": {
       "family": "SourceHanSerif-Regular.otf",
-      "size": 105,
+      "size": 30,
       "color": "#4B8EE3",
       "align": "center"
     },
     "caption2": {
       "family": "SourceHanSerif-Regular.otf",
-      "size": 50,
+      "size": 20,
       "color": "#CCA3A3",
       "align": "center"
     }

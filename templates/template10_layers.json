@@ -16,20 +16,20 @@
     },
     {
       "name": "Caption1",
-      "bbox": [314, 809, 623, 887],
+      "bbox": [314, 819, 623, 897],
       "type": "caption"
     }
   ],
   "fonts": {
     "title": {
       "family": "Lato-Bold.ttf",
-      "size": 200,
+      "size": 100,
       "color": "#ffffff",
       "align": "right"
     },
     "caption": {
       "family": "Lato-Bold.ttf",
-      "size": 15,
+      "size": 20,
       "color": "#ffffff",
       "align": "left"
     }

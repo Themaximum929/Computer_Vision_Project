@@ -50,7 +50,7 @@ class ConceptExpander:
             }
         """
     
-    def expand(self, keywords, temperature=1.2):
+    def expand(self, keywords, temperature=1.2, image_size=None):
         """Expand keywords into creative brief"""
         try:
             response = self.client.chat.completions.create(
@@ -61,8 +61,36 @@ class ConceptExpander:
                 ],
                 temperature=temperature
             )
-            response = response.choices[0].message.content
+            response_text = response.choices[0].message.content
+            
+            # Parse JSON response
+            # Remove markdown code blocks if present
+            if "```json" in response_text:
+                response_text = response_text.split("```json")[1].split("```")[0].strip()
+            elif "```" in response_text:
+                response_text = response_text.split("```")[1].split("```")[0].strip()
+            
+            llm_output = json.loads(response_text)
+            
+            # Convert to pipeline-compatible format
+            return {
+                'prompt': llm_output.get('description', keywords),
+                'title': llm_output.get('story title', ' '.join(keywords.split()[:3]).title()),
+                'captions': llm_output.get('captions', []),
+                'sentiment': 'positive',  # Default values for compatibility
+                'confidence': 0.9,
+                'mood': 'creative',
+                'themes': llm_output.get('description', keywords)
+            }
         except Exception as e:
-            print(f"Error: {e}")
-            return None
-        return response
+            print(f"Error in concept expansion: {e}")
+            # Fallback to basic format
+            return {
+                'prompt': keywords,
+                'title': ' '.join(keywords.split()[:3]).title(),
+                'captions': [],
+                'sentiment': 'neutral',
+                'confidence': 0.5,
+                'mood': 'neutral',
+                'themes': keywords
+            }

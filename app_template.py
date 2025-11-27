@@ -69,7 +69,8 @@ def generate_with_template(keywords, seed, template_num):
         
         # Store poster for editing (don't crop, keep full poster with captions)
         poster_state["image"] = poster
-        poster_state["title"] = " ".join(keyword_list[:3]).title()
+        poster_state["title"] = brief.get('title', " ".join(keyword_list[:3]).title())
+        poster_state["captions"] = brief.get('captions', [])
         poster_state["template"] = template
         
         # Get template colors and update state
@@ -80,7 +81,16 @@ def generate_with_template(keywords, seed, template_num):
         poster_state['bg_color'] = bg_color
         poster_state['text_color'] = text_color
         
-        info = f"✅ Generated\n\n**Title:** {poster_state['title']}\n**Template:** {templates.index(template)+1}/{len(templates)}\n**Font:** {font_info.get('family', 'Graduate-Regular.ttf')} ({font_info.get('size', 37)}px)\n**BG:** {bg_color}\n**Text:** {text_color}"
+        # Display LLM results
+        captions_text = "\n".join([f"  {i+1}. {cap}" for i, cap in enumerate(poster_state['captions'])]) if poster_state['captions'] else "  None"
+        info = f"""✅ Generated
+
+**LLM Title:** {poster_state['title']}
+**LLM Captions:**
+{captions_text}
+**Enhanced Prompt:** {brief.get('prompt', 'N/A')[:80]}...
+**Template:** {templates.index(template)+1}/{len(templates)}
+**BG:** {bg_color} | **Text:** {text_color}"""
         
         return poster, poster, info
         
@@ -359,7 +369,11 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
                 """)
     
     def update_ui_colors():
-        return poster_state.get("title", ""), poster_state.get("bg_color", "#faefcf"), poster_state.get("text_color", "#043bb4")
+        title = poster_state.get("title", "")
+        captions = poster_state.get("captions", [])
+        if captions:
+            title += "\n" + "\n".join(captions[:2])  # Show first 2 captions
+        return title, poster_state.get("bg_color", "#faefcf"), poster_state.get("text_color", "#043bb4")
     
     gen_btn.click(generate_with_template, [keywords, seed, template_num], [output_image, preview_image, status]).then(
         update_ui_colors, None, [title_input, bg_color, text_color]

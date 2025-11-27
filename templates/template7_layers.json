@@ -11,17 +11,17 @@
     },
     {
       "name": "Title",
-      "bbox": [87, 788, 627, 837],
+      "bbox": [87, 638, 627, 687],
       "type": "title"
     },
     {
       "name": "Caption1",
-      "bbox": [26, 936, 701, 982],
+      "bbox": [26, 882, 701, 928],
       "type": "caption"
     },
     {
       "name": "Caption2",
-      "bbox": [264, 1032, 480, 1070],
+      "bbox": [264, 832, 480, 870],
       "type": "caption"
     }
   ],
@@ -40,7 +40,7 @@
     },
     "caption2": {
       "family": "NotoSansGeorgian_ExtraCondensed-Black.ttf",
-      "size": 22,
+      "size": 20,
       "color": "#000000",
       "align": "center"
     }

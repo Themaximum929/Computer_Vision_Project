@@ -17,9 +17,10 @@ def load_pipeline():
     if pipeline is None:
         pipeline = Key2PosterPipeline(
             use_flux=True,
-            add_title=True,
+            add_title=False,  # Text added via template
             genre_lora=False,
-            remove_text=False,
+            remove_text=True,
+            aggressive_text_removal=True,
             super_resolution=False
         )
     return pipeline
@@ -35,17 +36,15 @@ def generate(keywords, poster_type, style_preset, seed, progress=gr.Progress()):
             return None, f"❌ Provide 2-5 keywords (got {len(keyword_list)})"
         
         progress(0.1, desc="Selecting template...")
-        # Template is randomly selected inside pipeline
-        
-        progress(0.3, desc="Enhancing prompt...")
-        # TODO: Advanced prompt enhancement (teammates will implement)
-        
-        progress(0.5, desc="Generating with FLUX...")
         start = time.time()
         
         pipe = load_pipeline()
         pipe.style_preset = style_preset
         pipe.poster_type = poster_type
+        
+        progress(0.3, desc="Enhancing prompt with LLM...")
+        
+        progress(0.5, desc="Generating with FLUX...")
         
         image, brief, metrics = pipe.generate_poster(
             keywords,
@@ -56,12 +55,22 @@ def generate(keywords, poster_type, style_preset, seed, progress=gr.Progress()):
         progress(1.0, desc="Complete!")
         elapsed = time.time() - start
         
+        # Get LLM results
+        llm_title = brief.get('title', 'N/A')
+        llm_captions = brief.get('captions', [])
+        captions_text = "\n".join([f"  {i+1}. {cap}" for i, cap in enumerate(llm_captions)]) if llm_captions else "  None"
+        
         info = f"""### ✅ Generated in {elapsed:.1f}s
 
-**Type:** {poster_type.title()} | **Style:** {style_preset.title()} | **Genre:** {getattr(pipe, '_current_genre', 'N/A')}  
-**Sentiment:** {brief['sentiment']} ({brief['confidence']:.0%}) | **Aesthetic:** {metrics['aesthetic']['overall']:.3f}
+**LLM Title:** {llm_title}
+**LLM Captions:**
+{captions_text}
 
-> 🎨 Template-based composition with FLUX-generated image
+**Enhanced Prompt:** {brief.get('prompt', 'N/A')[:100]}...
+**Type:** {poster_type.title()} | **Style:** {style_preset.title()}
+**Aesthetic:** {metrics['aesthetic']['overall']:.3f}
+
+> 🎨 Template-based composition with FLUX + LLM text generation
 """
         return image, info
         
@@ -71,7 +80,7 @@ def generate(keywords, poster_type, style_preset, seed, progress=gr.Progress()):
 with gr.Blocks(theme=gr.themes.Soft(), title="Key2Poster FLUX") as demo:
     gr.Markdown("""
     # 🎨 Key2Poster: AI Poster Generator
-    Generate professional posters from 2-5 keywords using **FLUX.1-schnell** with native text rendering.
+    Generate professional posters from 2-5 keywords using **FLUX.1** with **LLM-powered text generation**.
     """)
     
     with gr.Row():
@@ -130,8 +139,8 @@ with gr.Blocks(theme=gr.themes.Soft(), title="Key2Poster FLUX") as demo:
     
     gr.Markdown("""
     ---
-    **Features:** FLUX.1 Text Generation • 7 Poster Types • 7 Style Presets • Multi-Agent System  
-    **Models:** FLUX.1-schnell (4-step inference) • Genre Classification • Aesthetic Scoring
+    **Features:** Template-Based Composition • LLM Text Generation • FLUX.1 Image Generation • Random Templates  
+    **Models:** FLUX.1-schnell (4-step) • GPT-5-Chat (Poe API) • Aesthetic Scoring
     """)
 
 if __name__ == "__main__":
