@@ -15,6 +15,7 @@ try:
 except:
     ENHANCED_FLUX_AVAILABLE = False
 from src.genre_classifier import GenreClassifier
+from src.template_generator import TemplateGenerator
 from PIL import Image, ImageEnhance
 from pathlib import Path
 import time
@@ -24,7 +25,7 @@ class Key2PosterPipeline:
     def __init__(self, lora_path=None, use_lora=False, remove_text=True, aggressive_text_removal=False, 
                  super_resolution=True, add_title=False, baseline_style=False, genre_lora=False, 
                  use_template=False, template_path=None, use_flux=False, flux_model="black-forest-labs/FLUX.1-schnell",
-                 modern_text=False, enhanced_flux=False, style_preset='cinematic', poster_type='movie'):
+                 modern_text=False, enhanced_flux=False, style_preset='cinematic', poster_type='movie', auto_template=False):
         print("Initializing Key2Poster Pipeline...")
         print("Multi-Agent System (7 Agents):")
         print("  Agent 1: Concept Expander (Sentiment Analysis + Thematic Expansion)")
@@ -48,6 +49,8 @@ class Key2PosterPipeline:
         self.enhanced_flux = enhanced_flux
         self.style_preset = style_preset
         self.poster_type = poster_type
+        self.auto_template = auto_template
+        self.template_gen = TemplateGenerator() if auto_template else None
         
         # Use FLUX with text generation if requested
         if use_flux:
@@ -92,21 +95,27 @@ class Key2PosterPipeline:
         
         start_time = time.time()
         
-        # Step 1: Select random template
+        # Step 1: Select or generate template
         import glob
         import json
         import random
         
         if template is None:
-            template_files = glob.glob("templates/template*_layers.json")
-            if template_files:
-                template_file = random.choice(template_files)
-                with open(template_file) as f:
-                    template = json.load(f)
-                print(f"\n[1/5] Selected template: {template_file}")
+            if self.auto_template and self.template_gen:
+                # Auto-generate template based on genre
+                genre = self.poster_type if hasattr(self, 'poster_type') else 'movie'
+                template = self.template_gen.generate(genre=genre)
+                print(f"\n[1/5] Auto-generated template for genre: {genre}")
             else:
-                template = {"size": [720, 1080], "layers": []}
-                print(f"\n[1/5] No template found, using default")
+                template_files = glob.glob("templates/template*_layers.json")
+                if template_files:
+                    template_file = random.choice(template_files)
+                    with open(template_file) as f:
+                        template = json.load(f)
+                    print(f"\n[1/5] Selected template: {template_file}")
+                else:
+                    template = {"size": [720, 1080], "layers": []}
+                    print(f"\n[1/5] No template found, using default")
         
         # Get image layer dimensions from template
         img_layer = next((l for l in template['layers'] if 'image' in l['name'].lower()), None)

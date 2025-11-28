@@ -1,0 +1,4 @@
+# Additional requirements for CLG-LO Layout Enhancement
+torch>=2.0.0
+opencv-python>=4.8.0
+opencv-contrib-python>=4.8.0
