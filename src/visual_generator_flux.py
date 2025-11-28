@@ -43,8 +43,6 @@ class VisualGeneratorFlux:
         if seed is not None:
             generator = generator.manual_seed(seed)
         
-        prompt = f'{prompt},never generate any kind of text'
-        
         image = self.pipe(
             prompt,
             width=width,
