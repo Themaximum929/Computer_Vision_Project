@@ -390,13 +390,25 @@ class Key2PosterPipeline:
         brief['rendered_texts'] = []
         for idx, elem in enumerate(adjusted_elements):
             data = text_data[idx]
+            bbox = elem['bbox']
+            align = data['font_align']
+            
+            # Store reference point based on alignment
+            if align == 'center':
+                ref_x = poster_center_x
+            elif align == 'right':
+                ref_x = bbox[2]
+            else:
+                ref_x = bbox[0]
+            
             brief['rendered_texts'].append({
                 'text': '\n'.join(data['lines']),
-                'bbox': elem['bbox'],
+                'bbox': bbox,
+                'ref_x': ref_x,
                 'color': '#{:02x}{:02x}{:02x}'.format(*data['rgb_color']),
                 'size': data['font_size'],
                 'family': data['font_family'],
-                'align': data['font_align']
+                'align': align
             })
         
         return image, brief, metrics

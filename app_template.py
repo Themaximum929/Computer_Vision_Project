@@ -247,9 +247,19 @@ def apply_text_edits(title_text, title_x, title_y, title_size, title_color,
             except:
                 font = ImageFont.load_default()
             
-            if isinstance(color, str) and color.startswith('#'):
-                hex_color = color.lstrip('#')
-                rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4)) if len(hex_color) == 6 else (0, 0, 0)
+            # Handle color format
+            if color is None:
+                rgb = (0, 0, 0)
+            elif isinstance(color, str):
+                if color.startswith('#'):
+                    hex_color = color.lstrip('#')
+                    rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4)) if len(hex_color) == 6 else (0, 0, 0)
+                elif color.startswith('rgba'):
+                    import re
+                    nums = re.findall(r'[\d.]+', color)
+                    rgb = tuple(int(float(n)) for n in nums[:3]) if len(nums) >= 3 else (0, 0, 0)
+                else:
+                    rgb = (0, 0, 0)
             elif isinstance(color, dict):
                 rgb = (int(color.get('r', 0)), int(color.get('g', 0)), int(color.get('b', 0)))
             else:
@@ -257,23 +267,32 @@ def apply_text_edits(title_text, title_x, title_y, title_size, title_color,
             
             text = text.replace('\\n', '\n')
             
-            # Calculate text bbox to convert center to top-left
+            # Calculate text height for vertical centering
             bbox = draw.multiline_textbbox((0, 0), text, font=font)
-            text_width = bbox[2] - bbox[0]
             text_height = bbox[3] - bbox[1]
+            y = int(center_y) - text_height // 2
             
-            # Convert center position to top-left based on alignment
+            # Render based on alignment (match pipeline logic)
             if align == 'left':
-                x = int(center_x)
-                y = int(center_y) - text_height // 2
+                draw.multiline_text((int(center_x), y), text, font=font, fill=rgb, align='left')
             elif align == 'right':
-                x = int(center_x) - text_width
-                y = int(center_y) - text_height // 2
-            else:  # center
-                x = int(center_x) - text_width // 2
-                y = int(center_y) - text_height // 2
-            
-            draw.multiline_text((x, y), text, font=font, fill=rgb, align=align)
+                lines = text.split('\n')
+                y_offset = y
+                for line in lines:
+                    line_bbox = draw.textbbox((0, 0), line, font=font)
+                    line_width = line_bbox[2] - line_bbox[0]
+                    x = int(center_x) - line_width
+                    draw.text((x, y_offset), line, font=font, fill=rgb)
+                    y_offset += line_bbox[3] - line_bbox[1] + 5
+            else:  # center - use poster center like pipeline
+                lines = text.split('\n')
+                y_offset = y
+                for line in lines:
+                    line_bbox = draw.textbbox((0, 0), line, font=font)
+                    line_width = line_bbox[2] - line_bbox[0]
+                    x = int(center_x) - line_width // 2
+                    draw.text((x, y_offset), line, font=font, fill=rgb)
+                    y_offset += line_bbox[3] - line_bbox[1] + 5
     
     poster_state["image"] = poster
     return poster, poster, poster
@@ -287,8 +306,7 @@ def get_text_defaults():
         if idx < len(rendered_texts):
             rendered = rendered_texts[idx]
             bbox = rendered['bbox']
-            # Return center position for intuitive slider control
-            center_x = (bbox[0] + bbox[2]) // 2
+            center_x = rendered.get('ref_x', (bbox[0] + bbox[2]) // 2)
             center_y = (bbox[1] + bbox[3]) // 2
             text_display = rendered['text'].replace('\n', '\\n')
             defaults.append((text_display, center_x, center_y, rendered['size'], rendered['color']))
@@ -330,6 +348,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
                         title_y = gr.Slider(0, 1080, label="Y Center", value=900)
                         title_size = gr.Slider(10, 200, label="Font Size", value=37, step=1)
                         title_color = gr.ColorPicker(label="Color", value="#043bb4")
+                        title_apply = gr.Button("Apply Color", size="sm")
             
             with gr.Tab("Caption 1"):
                 with gr.Row():
@@ -340,6 +359,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
                         caption1_y = gr.Slider(0, 1080, label="Y Center", value=950)
                         caption1_size = gr.Slider(10, 200, label="Font Size", value=20, step=1)
                         caption1_color = gr.ColorPicker(label="Color", value="#043bb4")
+                        caption1_apply = gr.Button("Apply Color", size="sm")
             
             with gr.Tab("Caption 2"):
                 with gr.Row():
@@ -350,6 +370,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
                         caption2_y = gr.Slider(0, 1080, label="Y Center", value=1000)
                         caption2_size = gr.Slider(10, 200, label="Font Size", value=20, step=1)
                         caption2_color = gr.ColorPicker(label="Color", value="#043bb4")
+                        caption2_apply = gr.Button("Apply Color", size="sm")
     
     def update_ui_colors():
         title = poster_state.get("title", "")
@@ -383,13 +404,20 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     
     edit_btn.click(edit_poster, [title_input, bg_color, text_color], [preview_image, status])
     
-    # Real-time updates on slider/input change
+    # Real-time updates on slider/input change (exclude color pickers)
     inputs = [title_text, title_x, title_y, title_size, title_color,
               caption1_text, caption1_x, caption1_y, caption1_size, caption1_color,
               caption2_text, caption2_x, caption2_y, caption2_size, caption2_color]
     
-    for inp in inputs:
+    for inp in [title_text, title_x, title_y, title_size,
+                caption1_text, caption1_x, caption1_y, caption1_size,
+                caption2_text, caption2_x, caption2_y, caption2_size]:
         inp.change(apply_text_edits, inputs, [output_image, output_image2, output_image3])
+    
+    # Color updates on button click
+    title_apply.click(apply_text_edits, inputs, [output_image, output_image2, output_image3])
+    caption1_apply.click(apply_text_edits, inputs, [output_image, output_image2, output_image3])
+    caption2_apply.click(apply_text_edits, inputs, [output_image, output_image2, output_image3])
     
     gr.Examples(
         [["anime love story japanese", 0, 42], ["cyberpunk neon city", 1, 123]],
