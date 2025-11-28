@@ -120,12 +120,9 @@ class ConceptExpander:
         except Exception as e:
             print(f"Error in concept expansion: {e}")
             # Fallback to basic format
-            return {
-                'prompt': keywords,
-                'title': ' '.join(keywords.split()[:3]).title(),
-                'captions': [],
-                'sentiment': 'neutral',
-                'confidence': 0.5,
-                'mood': 'neutral',
-                'themes': keywords
+            return{
+                'description': prompt,
+                'story title': ' '.join(prompt.split()[:3]).title(),
+                'captions': []
             }
+        return response
