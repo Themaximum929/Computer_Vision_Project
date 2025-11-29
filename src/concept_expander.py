@@ -12,7 +12,7 @@ class ConceptExpander:
         assert POE_API_KEY is not None, "POE_API_KEY is not set in the .env file"
         self.client = openai.OpenAI(api_key=POE_API_KEY, base_url=self.base_url)
         self.model = model
-        self.valid_poster_types = ["movie", "book", "event", "product", "music", "game", "theater", "conference", "festival"]
+        self.valid_poster_types = ["movie", "book", "event", "product", "music", "game", "theater", "conference", "festival", "sports"]
         self.poster_type_guidance = {
             "movie": "cinematic, dramatic, film-like composition with strong visual storytelling",
             "book": "literary, evocative, cover art style with symbolic or narrative elements",
@@ -22,7 +22,8 @@ class ConceptExpander:
             "game": "action-oriented, immersive, game art style with dynamic elements",
             "theater": "theatrical, dramatic, stage-inspired composition with bold visuals",
             "conference": "professional, modern, corporate style with clear hierarchy",
-            "festival": "vibrant, energetic, celebratory style with festive atmosphere"
+            "festival": "vibrant, energetic, celebratory style with festive atmosphere",
+            "sports": "dynamic, action-packed, athletic style with energy and movement"
         }
     
     def expand(self, prompt, poster_type="movie", paint_style="digital watercolor", img_size=(720, 1072), temperature=1.2):
@@ -121,11 +122,14 @@ class ConceptExpander:
             print(f"Error in concept expansion: {e}")
             # Fallback to basic format
             return {
-                'prompt': keywords,
-                'title': ' '.join(keywords.split()[:3]).title(),
-                'captions': [],
+                'description': prompt + f", {paint_style} style",
+                'story title': ' '.join(prompt.split()[:3]).title(),
+                'captions': ["Coming Soon"],
                 'sentiment': 'neutral',
                 'confidence': 0.5,
                 'mood': 'neutral',
-                'themes': keywords
+                'themes': prompt
             }
+        
+        # Return the LLM response
+        return response

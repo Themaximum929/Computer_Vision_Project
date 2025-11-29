@@ -28,11 +28,23 @@ class SmartCompositor:
         subject_bbox = self._detect_subject(large_img)
         offset_x, offset_y = self._apply_composition(subject_bbox, (1920, 1080))
         
-        # Step 3: Crop and resize to poster size with composition offset
-        crop_x = max(0, min(1920 - self.poster_size[0], 
-                           (1920 - self.poster_size[0])//2 - offset_x))
-        crop_y = max(0, min(1080 - self.poster_size[1], 
-                           (1080 - self.poster_size[1])//2 - offset_y))
+        # Step 3: Crop keeping subject fully visible
+        subject_w = subject_bbox[2] - subject_bbox[0]
+        subject_h = subject_bbox[3] - subject_bbox[1]
+        
+        # Start with centered crop
+        crop_x = max(0, min(1920 - self.poster_size[0], (1920 - self.poster_size[0]) // 2))
+        crop_y = max(0, min(1080 - self.poster_size[1], (1080 - self.poster_size[1]) // 2))
+        
+        # Adjust if subject is cut off
+        if subject_bbox[0] < crop_x + 50:
+            crop_x = max(0, subject_bbox[0] - 50)
+        if subject_bbox[2] > crop_x + self.poster_size[0] - 50:
+            crop_x = min(1920 - self.poster_size[0], subject_bbox[2] - self.poster_size[0] + 50)
+        if subject_bbox[1] < crop_y + 50:
+            crop_y = max(0, subject_bbox[1] - 50)
+        if subject_bbox[3] > crop_y + self.poster_size[1] - 50:
+            crop_y = min(1080 - self.poster_size[1], subject_bbox[3] - self.poster_size[1] + 50)
         
         composed_img = large_img.crop((crop_x, crop_y, 
                                        crop_x + self.poster_size[0],
@@ -56,7 +68,7 @@ class SmartCompositor:
         
         # Step 6: Generate CLG-LO layout for text
         if self.use_clg_lo:
-            text_layouts = self.layout_gen.generate_layout(img_bbox, title, captions, seed)
+            text_layouts = self.layout_gen.generate_layout(img_bbox, title, captions, seed, poster)
         else:
             text_layouts = self.layout_gen.generate_text_layout(poster, img_bbox, title, captions)
         
@@ -73,33 +85,58 @@ class SmartCompositor:
         }
     
     def _render_text(self, draw, poster, layout):
-        """Render single text element"""
+        """Render single text element with wrapping"""
         try:
             font = ImageFont.truetype(f"fonts/{layout['font']}", layout['size'])
         except:
             font = ImageFont.load_default()
         
         text = layout['text']
-        x, y = layout['x'], layout['y']
+        bbox = layout['bbox']
         align = layout['align']
         color = layout['color'] if isinstance(layout['color'], tuple) else (255, 255, 255)
         
-        # Get text bbox for positioning
-        bbox = draw.textbbox((0, 0), text, font=font)
-        text_w, text_h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        # Text wrapping
+        max_width = bbox[2] - bbox[0]
+        words = text.split()
+        lines = []
+        current_line = []
         
-        # Adjust position based on alignment
-        if align == 'center':
-            x = x - text_w // 2
-        elif align == 'right':
-            x = x - text_w
+        for word in words:
+            test_line = ' '.join(current_line + [word])
+            test_bbox = draw.textbbox((0, 0), test_line, font=font)
+            if test_bbox[2] - test_bbox[0] <= max_width:
+                current_line.append(word)
+            else:
+                if current_line:
+                    lines.append(' '.join(current_line))
+                    current_line = [word]
+                else:
+                    lines.append(word)
+        if current_line:
+            lines.append(' '.join(current_line))
         
-        y = y - text_h // 2  # Vertical center
+        # Render based on alignment
+        y_offset = bbox[1]
+        poster_center_x = poster.width // 2
         
-        # Draw text with outline
-        for dx, dy in [(-2,-2), (-2,2), (2,-2), (2,2)]:
-            draw.text((x+dx, y+dy), text, font=font, fill=(0,0,0))
-        draw.text((x, y), text, font=font, fill=color)
+        for line in lines:
+            line_bbox = draw.textbbox((0, 0), line, font=font)
+            line_w = line_bbox[2] - line_bbox[0]
+            
+            if align == 'center':
+                x = poster_center_x - line_w // 2
+            elif align == 'right':
+                x = bbox[2] - line_w
+            else:
+                x = bbox[0]
+            
+            # Draw outline
+            for dx, dy in [(-2,-2), (-2,2), (2,-2), (2,2)]:
+                draw.text((x+dx, y_offset+dy), line, font=font, fill=(0,0,0))
+            draw.text((x, y_offset), line, font=font, fill=color)
+            
+            y_offset += line_bbox[3] - line_bbox[1] + 5
     
     def _detect_subject(self, image):
         """Detect main subject using saliency"""
@@ -117,14 +154,25 @@ class SmartCompositor:
         return (image.width//4, image.height//4, 3*image.width//4, 3*image.height//4)
     
     def _apply_composition(self, subject_bbox, img_size):
-        """Apply golden ratio or rule of thirds"""
+        """Apply golden ratio or rule of thirds to position subject optimally"""
         x1, y1, x2, y2 = subject_bbox
         w, h = img_size
         cx, cy = (x1+x2)//2, (y1+y2)//2
+        
+        # Choose composition rule
         rule = np.random.choice(['golden', 'thirds'])
+        
         if rule == 'golden':
-            target_x, target_y = int(w * 0.618), int(h * 0.618)
+            # Golden ratio: place subject at 0.618 or 0.382 position
+            target_x = int(w * np.random.choice([0.382, 0.618]))
+            target_y = int(h * np.random.choice([0.382, 0.618]))
         else:
-            target_x = w // 3 if cx < w//2 else 2*w//3
-            target_y = h // 3 if cy < h//2 else 2*h//3
-        return target_x - cx, target_y - cy
+            # Rule of thirds: place at intersection points
+            target_x = int(w * np.random.choice([1/3, 2/3]))
+            target_y = int(h * np.random.choice([1/3, 2/3]))
+        
+        # Calculate offset to move subject to target position
+        offset_x = target_x - cx
+        offset_y = target_y - cy
+        
+        return offset_x, offset_y

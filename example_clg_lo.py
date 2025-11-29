@@ -26,13 +26,15 @@ def example_clg_lo():
         # Step 1: Expand concepts
         print("\n[1/3] Expanding concepts...")
         brief = pipeline.expander.expand(keywords)
-        print(f"  Title: {brief['title']}")
-        print(f"  Captions: {brief['captions']}")
+        title = brief.get('story title', brief.get('title', keywords.title()))
+        captions = brief.get('captions', [])
+        print(f"  Title: {title}")
+        print(f"  Captions: {captions}")
         
         # Step 2: Generate FLUX image
         print("\n[2/3] Generating FLUX image (1920x1080)...")
         flux_img = pipeline.generator.generate(
-            f"{brief['prompt']}, no text, no words",
+            f"{brief['description']}, no text, no words",
             seed=seed,
             width=1920,
             height=1080
@@ -43,8 +45,8 @@ def example_clg_lo():
         print("\n[3/3] Composing with CLG-LO layout...")
         poster, metadata = compositor.compose_poster(
             flux_img,
-            brief['title'],
-            brief['captions'],
+            title,
+            captions,
             keywords,
             seed
         )
@@ -76,8 +78,10 @@ def compare_modes():
     
     # Generate FLUX image once
     brief = pipeline.expander.expand(keywords)
+    title = brief.get('story title', brief.get('title', keywords.title()))
+    captions = brief.get('captions', [])
     flux_img = pipeline.generator.generate(
-        f"{brief['prompt']}, no text",
+        f"{brief['description']}, no text",
         seed=seed, width=1920, height=1080
     )
     
@@ -85,7 +89,7 @@ def compare_modes():
     print("\n[CLG-LO Mode]")
     compositor_clg = SmartCompositor(use_clg_lo=True)
     poster_clg, meta_clg = compositor_clg.compose_poster(
-        flux_img, brief['title'], brief['captions'], keywords, seed
+        flux_img, title, captions, keywords, seed
     )
     poster_clg.save("outputs/compare_clg_lo.png")
     print(f"  Text elements: {len(meta_clg['text_layouts'])}")
@@ -95,7 +99,7 @@ def compare_modes():
     print("\n[Rule-based Mode]")
     compositor_rule = SmartCompositor(use_clg_lo=False)
     poster_rule, meta_rule = compositor_rule.compose_poster(
-        flux_img, brief['title'], brief['captions'], keywords, seed
+        flux_img, title, captions, keywords, seed
     )
     poster_rule.save("outputs/compare_rule_based.png")
     print(f"  Text elements: {len(meta_rule['text_layouts'])}")

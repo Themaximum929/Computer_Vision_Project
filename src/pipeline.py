@@ -102,10 +102,24 @@ class Key2PosterPipeline:
         
         if template is None:
             if self.auto_template and self.template_gen:
-                # Auto-generate template based on genre
-                genre = self.poster_type if hasattr(self, 'poster_type') else 'movie'
-                template = self.template_gen.generate(genre=genre)
-                print(f"\n[1/5] Auto-generated template for genre: {genre}")
+                # Mix: 50% auto-generated, 50% existing templates
+                use_auto = random.random() < 0.5
+                
+                if use_auto:
+                    genre = self.poster_type if hasattr(self, 'poster_type') else 'movie'
+                    template = self.template_gen.generate(genre=genre)
+                    print(f"\n[1/5] Auto-generated: {template['layout_type']} layout, {template['fonts']['title']['align']} align")
+                else:
+                    template_files = glob.glob("templates/template*_layers.json")
+                    if template_files:
+                        template_file = random.choice(template_files)
+                        with open(template_file) as f:
+                            template = json.load(f)
+                        print(f"\n[1/5] Using existing template: {template_file}")
+                    else:
+                        genre = self.poster_type if hasattr(self, 'poster_type') else 'movie'
+                        template = self.template_gen.generate(genre=genre)
+                        print(f"\n[1/5] Auto-generated (fallback): {template['layout_type']}")
             else:
                 template_files = glob.glob("templates/template*_layers.json")
                 if template_files:
@@ -170,7 +184,7 @@ class Key2PosterPipeline:
         image = self.generator.generate(poster_prompt, width=image_size[0], height=image_size[1], seed=seed)
         
         # Store FLUX image in brief for canvas editing
-        brief['flux_image'] = flux_image
+        brief['flux_image'] = image
         
         # Step 5: Merge with template and add LLM-processed text
         print(f"\n[5/5] Composing final poster...")
@@ -190,7 +204,7 @@ class Key2PosterPipeline:
         # Paste generated image into template
         if img_layer:
             img_bbox = img_layer['bbox']
-            poster.paste(flux_image, (img_bbox[0], img_bbox[1]))
+            poster.paste(image, (img_bbox[0], img_bbox[1]))
             print(f"  ✓ Placed image at {img_bbox}")
         
         # Add LLM-processed text (support multiple text layers)
@@ -198,7 +212,7 @@ class Key2PosterPipeline:
         print(f"  Found {len(text_layers)} text layers: {[l['name'] for l in text_layers]}")
         
         # Get title and captions from LLM
-        llm_title = brief.get('title', ' '.join(keyword_list[:3]).title())
+        llm_title = brief.get('story title', brief.get('title', ' '.join(keyword_list[:3]).title()))
         llm_captions = brief.get('captions', [])
         
         # Prepare text elements for collision detection
