@@ -8,12 +8,12 @@ import json
 
 class Generator(nn.Module):
     """Generator: noise + conditions -> layout"""
-    def __init__(self, noise_dim=128, condition_dim=256, num_elements=3):
+    def __init__(self, noise_dim=128, img_feat_dim=512, text_feat_dim=256, num_elements=3):
         super().__init__()
         self.num_elements = num_elements
         
-        # Input: [noise(128) + image_features(256) + text_embedding(256)] = 640
-        input_dim = noise_dim + condition_dim * 2
+        # Input: [noise(128) + image_features(512) + text_embedding(256)] = 896
+        input_dim = noise_dim + img_feat_dim + text_feat_dim
         
         self.model = nn.Sequential(
             nn.Linear(input_dim, 512),
@@ -82,12 +82,12 @@ class LayoutGAN:
         self.load_checkpoint()
     
     def train_step(self, real_layouts, img_features, text_features):
-        """Single training step"""
+        """Single training step with diversity enforcement"""
         batch_size = real_layouts.size(0)
         
-        # Labels
-        real_labels = torch.ones(batch_size, 1).to(self.device)
-        fake_labels = torch.zeros(batch_size, 1).to(self.device)
+        # Labels with label smoothing
+        real_labels = torch.ones(batch_size, 1).to(self.device) * 0.9
+        fake_labels = torch.zeros(batch_size, 1).to(self.device) + 0.1
         
         # Train Discriminator
         self.d_optimizer.zero_grad()
@@ -96,7 +96,7 @@ class LayoutGAN:
         real_output = self.discriminator(real_layouts)
         d_loss_real = self.criterion(real_output, real_labels)
         
-        # Fake layouts
+        # Fake layouts with DIVERSE noise
         noise = torch.randn(batch_size, 128).to(self.device)
         fake_layouts = self.generator(noise, img_features, text_features)
         fake_output = self.discriminator(fake_layouts.detach())
@@ -106,11 +106,24 @@ class LayoutGAN:
         d_loss.backward()
         self.d_optimizer.step()
         
-        # Train Generator
+        # Train Generator with diversity loss
         self.g_optimizer.zero_grad()
         
-        fake_output = self.discriminator(fake_layouts)
-        g_loss = self.criterion(fake_output, real_labels)
+        # Generate multiple layouts
+        noise1 = torch.randn(batch_size, 128).to(self.device)
+        noise2 = torch.randn(batch_size, 128).to(self.device)
+        
+        fake_layouts1 = self.generator(noise1, img_features, text_features)
+        fake_layouts2 = self.generator(noise2, img_features, text_features)
+        
+        # Adversarial loss
+        fake_output = self.discriminator(fake_layouts1)
+        g_loss_adv = self.criterion(fake_output, torch.ones(batch_size, 1).to(self.device))
+        
+        # Diversity loss: different noise should produce different layouts
+        diversity_loss = -torch.mean(torch.abs(fake_layouts1 - fake_layouts2))
+        
+        g_loss = g_loss_adv + 0.1 * diversity_loss
         
         g_loss.backward()
         self.g_optimizer.step()

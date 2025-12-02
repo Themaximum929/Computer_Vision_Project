@@ -1,93 +1,136 @@
-"""CLG-LO Poster Generator - Real Neural Network Implementation"""
-import sys
-sys.path.insert(0, '.')
-
+"""CLG-LO Poster Generator - AI Layout with Gradio UI"""
+import gradio as gr
 from src.pipeline import Key2PosterPipeline
 from src.clg_lo_engine import CLGLOEngine
 import time
-
-print("=" * 70)
-print("CLG-LO: Constrained LayoutGAN with Latent Optimization")
-print("Real Neural Network for Poster Layout Generation")
-print("=" * 70)
-
-# Step 1: Train LayoutGAN (if not trained)
-print("\n[Step 1] Checking LayoutGAN model...")
 from pathlib import Path
-if not Path("models/layout_gan.pth").exists():
-    print("⚠️  LayoutGAN not trained. Training now...")
-    print("Run: python train_layout_gan.py")
-    print("\nFor demo, using untrained model (will generate random layouts)")
-    input("Press Enter to continue...")
+import torch
+import gc
 
-# Step 2: Initialize CLG-LO engine
-print("\n[Step 2] Initializing CLG-LO engine...")
+# Initialize once and reuse
 clg_lo = CLGLOEngine()
-print("✅ CLG-LO engine ready")
-
-# Step 3: Initialize pipeline
-print("\n[Step 3] Initializing poster pipeline...")
 pipeline = Key2PosterPipeline(
     use_flux=True,
     remove_text=True,
     add_title=False,
     poster_type='movie'
 )
-print("✅ Pipeline ready")
 
-# Step 4: Generate posters with CLG-LO
-keywords = "cyberpunk neon city"
+poster_state = {"image": None, "template": None}
 
-print(f"\n{'=' * 70}")
-print(f"Generating 3 posters with CLG-LO: '{keywords}'")
-print(f"{'=' * 70}")
+def generate_with_clg_lo(keywords, seed, optimize):
+    try:
+        keyword_list = [k.strip() for k in keywords.split() if k.strip()]
+        if len(keyword_list) < 2 or len(keyword_list) > 5:
+            return None, "❌ Provide 2-5 keywords"
+        
+        start = time.time()
+        
+        # Use pipeline's generator (it's called 'generator', not 'visual_generator')
+        flux_image = pipeline.generator.generate(
+            keywords, 
+            seed=seed if seed > 0 else None, 
+            width=600, 
+            height=800
+        )
+        
+        # Generate layout with CLG-LO
+        template = clg_lo.generate_layout(flux_image, keywords, optimize=optimize)
+        
+        # Compose poster using pipeline's generate_poster with template
+        # Save flux_image temporarily and pass template
+        output_path = f"outputs/clg_lo_{int(time.time())}.png"
+        
+        # Use pipeline's generate_poster but with CLG-LO template
+        image, brief, metrics = pipeline.generate_poster(
+            keywords,
+            output_path=output_path,
+            seed=seed if seed > 0 else None,
+            evaluate=True,
+            template=template
+        )
+        
+        poster_state["image"] = image
+        poster_state["template"] = template
+        
+        # Cleanup
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        gc.collect()
+        
+        elapsed = time.time() - start
+        
+        # Check if model is trained
+        model_status = "✅ Trained" if Path("models/layout_gan.pth").exists() else "⚠️ Untrained (random)"
+        
+        info = f"""✅ Generated with CLG-LO
 
-for i in range(3):
-    print(f"\n[Poster {i+1}/3]")
-    start = time.time()
+**Method:** {'Optimized' if optimize else 'Direct'} LayoutGAN
+**Model:** {model_status}
+**Layout:** AI-generated (infinite variety)
+**Aesthetic:** {metrics['aesthetic']['overall']:.3f}
+**Time:** {elapsed:.1f}s
+
+**Enhanced Prompt:** {brief.get('prompt', keywords)[:100]}...
+**Template Size:** {template['size']}
+**Layers:** {len(template['layers'])}"""
+        
+        return image, info
+        
+    except Exception as e:
+        import traceback
+        return None, f"❌ Error: {str(e)}\n{traceback.format_exc()}"
+
+with gr.Blocks(theme=gr.themes.Soft()) as demo:
+    gr.Markdown("""# 🤖 CLG-LO: AI Poster Layout Generator
+**Constrained LayoutGAN with Latent Optimization**
+
+Generate posters with neural network layouts (infinite variety!)""")
     
-    # Generate FLUX image first
-    print("  [1/3] Generating FLUX image...")
-    from src.concept_expander import ConceptExpander
-    from src.visual_generator_flux import VisualGeneratorFlux
+    with gr.Row():
+        with gr.Column(scale=1):
+            gr.Markdown("### 🎨 Generate")
+            keywords = gr.Textbox(label="Keywords (2-5 words)", placeholder="cyberpunk neon city")
+            seed = gr.Number(label="Seed (0 = random)", value=0, precision=0)
+            optimize = gr.Checkbox(label="Enable Latent Optimization", value=True)
+            gen_btn = gr.Button("🚀 Generate with CLG-LO", variant="primary")
+            
+            gr.Markdown("""### ℹ️ About CLG-LO
+**LayoutGAN:** Neural network trained on poster layouts
+**Latent Optimization:** Constraint-based refinement
+**Constraints:** Overlap, Alignment, Hierarchy, Border, Balance
+
+**Advantages:**
+- ✅ Infinite layout variety
+- ✅ Content-aware design
+- ✅ Professional quality
+- ✅ Constraint-optimized
+
+**Note:** Train model first with `python train_layout_gan.py`""")
+        
+        with gr.Column(scale=2):
+            output_image = gr.Image(label="Generated Poster", height=700)
+            status = gr.Markdown("Ready...")
     
-    expander = ConceptExpander()
-    brief = expander.expand(keywords)
+    gen_btn.click(generate_with_clg_lo, [keywords, seed, optimize], [output_image, status])
     
-    generator = VisualGeneratorFlux()
-    flux_image = generator.generate(brief['prompt'], seed=42+i, width=600, height=800)
-    
-    # Generate layout with CLG-LO
-    print("  [2/3] Generating layout with CLG-LO...")
-    template = clg_lo.generate_layout(flux_image, keywords, optimize=True)
-    
-    # Generate final poster
-    print("  [3/3] Composing final poster...")
-    image, brief_full, metrics = pipeline.generate_poster(
-        keywords,
-        output_path=f"outputs/clg_lo_poster_{i+1}.png",
-        seed=42 + i,
-        template=template
+    gr.Examples(
+        [["cyberpunk neon city", 42, True], 
+         ["anime love story japanese", 123, True],
+         ["summer music festival", 0, False]],
+        [keywords, seed, optimize]
     )
     
-    elapsed = time.time() - start
-    
-    print(f"\n✅ Poster {i+1} complete!")
-    print(f"   Layout: CLG-LO optimized")
-    print(f"   Aesthetic: {metrics['aesthetic']['overall']:.3f}")
-    print(f"   Time: {elapsed:.1f}s")
+    gr.Markdown("""---
+### 📊 CLG-LO vs Template Comparison
 
-print(f"\n{'=' * 70}")
-print("COMPLETE: 3 posters generated with neural network layouts")
-print("Check outputs/clg_lo_poster_*.png")
-print(f"{'=' * 70}")
+| Metric | Template | CLG-LO |
+|--------|----------|--------|
+| Variety | ~10 layouts | Infinite |
+| Adaptability | Static | Dynamic |
+| Optimization | None | Constrained |
+| Speed | 12-18s | 15-23s |
+""")
 
-print("\n📊 CLG-LO vs Template Comparison:")
-print("┌─────────────────┬──────────────┬──────────────┐")
-print("│ Metric          │ Template     │ CLG-LO       │")
-print("├─────────────────┼──────────────┼──────────────┤")
-print("│ Variety         │ ~10 layouts  │ Infinite     │")
-print("│ Adaptability    │ Static       │ Dynamic      │")
-print("│ Optimization    │ None         │ Constrained  │")
-print("│ Speed           │ 12-18s       │ 15-23s       │")
-print("└─────────────────┴──────────────┴──────────────┘")
+if __name__ == "__main__":
+    demo.launch()

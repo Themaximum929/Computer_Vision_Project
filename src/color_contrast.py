@@ -12,8 +12,17 @@ def get_average_color(image, bbox):
     Returns:
         (r, g, b) tuple
     """
+    # Ensure valid bbox
+    x1, y1, x2, y2 = bbox
+    if x2 <= x1 or y2 <= y1:
+        return (128, 128, 128)  # Return gray for invalid bbox
+    
     region = image.crop(bbox)
     pixels = list(region.getdata())
+    
+    if len(pixels) == 0:
+        return (128, 128, 128)
+    
     r_avg = sum(p[0] for p in pixels) // len(pixels)
     g_avg = sum(p[1] for p in pixels) // len(pixels)
     b_avg = sum(p[2] for p in pixels) // len(pixels)
@@ -33,7 +42,7 @@ def color_distance(c1, c2):
     """Calculate Euclidean distance between two RGB colors"""
     return sum((a - b) ** 2 for a, b in zip(c1, c2)) ** 0.5
 
-def adjust_text_color(bg_color, text_color, threshold=150):
+def adjust_text_color(bg_color, text_color, threshold=100):
     """Adjust text color if too similar to background
     
     Args:

@@ -11,6 +11,9 @@ class LatentOptimizer:
     
     def optimize(self, img_features, text_features, iterations=50, lr=0.01):
         """Optimize latent vector z to satisfy constraints"""
+        # Set generator to eval mode (fixes BatchNorm with batch_size=1)
+        self.layout_gan.generator.eval()
+        
         # Initialize random z
         z = torch.randn(1, 128, requires_grad=True, device=self.device)
         
@@ -59,9 +62,9 @@ class LatentOptimizer:
         border_loss = self.border_constraint(layout)
         balance_loss = self.balance_constraint(layout)
         
-        # Weighted sum
+        # Weighted sum (10x overlap penalty to prevent collisions)
         total_loss = (
-            1.0 * overlap_loss +
+            10.0 * overlap_loss +
             0.5 * alignment_loss +
             0.3 * hierarchy_loss +
             0.8 * border_loss +

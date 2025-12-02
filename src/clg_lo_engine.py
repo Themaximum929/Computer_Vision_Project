@@ -104,6 +104,17 @@ class CLGLOEngine:
             x1, y1, x2, y2 = elem[:4]
             type_logits = elem[4:]
             
+            # Clamp to [0, 1] and ensure x2 > x1, y2 > y1
+            x1 = np.clip(x1, 0, 1)
+            y1 = np.clip(y1, 0, 1)
+            x2 = np.clip(x2, 0, 1)
+            y2 = np.clip(y2, 0, 1)
+            
+            if x2 <= x1:
+                x2 = min(x1 + 0.1, 1.0)
+            if y2 <= y1:
+                y2 = min(y1 + 0.1, 1.0)
+            
             # Denormalize coordinates
             bbox = [
                 int(x1 * w),
@@ -121,14 +132,32 @@ class CLGLOEngine:
                 'bbox': bbox
             })
         
+        import random
+        
+        # Random font selection
+        fonts = ['Graduate-Regular.ttf', 'Montserrat-Regular.ttf', 'Lato-Bold.ttf', 
+                 'PlayfairDisplay-Regular.ttf', 'IBMPlexSerif-Regular.ttf', 'Banshee-Regular.otf']
+        title_font = random.choice(fonts)
+        caption_font = random.choice(fonts)
+        
+        # Random colors
+        colors = ['#043bb4', '#000000', '#ffffff', '#ff4444', '#00ff9f', '#ffd700']
+        bg_colors = ['#faefcf', '#1a1a2e', '#ffffff', '#0f0f23', '#fff4e1']
+        text_color = random.choice(colors)
+        bg_color = random.choice(bg_colors)
+        
+        # Random alignment
+        aligns = ['left', 'center', 'right']
+        align = random.choice(aligns)
+        
         template = {
             'size': [w, h],
             'layout_type': 'clg_lo_generated',
-            'background_color': '#faefcf',
+            'background_color': bg_color,
             'layers': layers,
             'fonts': {
-                'title': {'family': 'Graduate-Regular.ttf', 'size': 42, 'color': '#043bb4', 'align': 'center'},
-                'caption': {'family': 'Graduate-Regular.ttf', 'size': 18, 'color': '#043bb4', 'align': 'center'}
+                'title': {'family': title_font, 'size': random.randint(35, 50), 'color': text_color, 'align': align},
+                'caption': {'family': caption_font, 'size': random.randint(16, 22), 'color': text_color, 'align': align}
             }
         }
         

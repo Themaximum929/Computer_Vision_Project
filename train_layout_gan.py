@@ -30,20 +30,17 @@ def extract_image_features(image_path):
 
 def extract_text_features(keywords):
     """Simple text embedding (can be replaced with BERT)"""
-    # Simple bag-of-words embedding
-    vocab = ['movie', 'music', 'event', 'sports', 'anime', 'cyberpunk', 'neon', 
-             'love', 'action', 'concert', 'festival', 'championship']
-    
     embedding = np.zeros(256)
     words = keywords.lower().split()
     
-    for i, word in enumerate(vocab):
+    vocab = ['movie', 'music', 'event', 'sports', 'anime', 'cyberpunk', 'neon', 
+             'love', 'action', 'concert', 'festival', 'championship']
+    
+    for i, word in enumerate(vocab[:12]):
         if word in words:
             embedding[i * 20:(i + 1) * 20] = 1.0
     
-    # Add random noise for diversity
     embedding += np.random.randn(256) * 0.1
-    
     return embedding
 
 def load_training_data():
@@ -82,7 +79,7 @@ def load_training_data():
         layouts.append(layout)
         
         # Generate dummy conditions
-        img_feat = np.random.randn(256)
+        img_feat = np.random.randn(512)  # Match ResNet-18 output
         text_feat = extract_text_features("movie poster")
         conditions.append((img_feat, text_feat))
     
@@ -105,8 +102,8 @@ def train():
     
     gan = LayoutGAN(device=device)
     
-    # Training loop
-    epochs = 500
+    # Training loop with more epochs for diversity
+    epochs = 1000
     batch_size = 4
     
     print(f"\nTraining for {epochs} epochs...")
@@ -131,12 +128,13 @@ def train():
     
     # Test generation
     print("\nTesting generation...")
-    test_img_feat = np.random.randn(256)
+    test_img_feat = np.random.randn(512)
     test_text_feat = extract_text_features("cyberpunk neon city")
     
     layout = gan.generate(test_img_feat, test_text_feat)
     print(f"Generated layout shape: {layout.shape}")
     print(f"Sample element: {layout[0]}")
+    print(f"\n✅ Model ready for use!")
 
 if __name__ == "__main__":
     train()
