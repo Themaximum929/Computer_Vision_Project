@@ -16,6 +16,11 @@ except:
     ENHANCED_FLUX_AVAILABLE = False
 from src.genre_classifier import GenreClassifier
 from src.template_generator import TemplateGenerator
+try:
+    from src.postero_adapter import PosterOAdapter
+    POSTERO_AVAILABLE = True
+except:
+    POSTERO_AVAILABLE = False
 from PIL import Image, ImageEnhance
 from pathlib import Path
 import time
@@ -25,9 +30,11 @@ class Key2PosterPipeline:
     def __init__(self, lora_path=None, use_lora=False, remove_text=True, aggressive_text_removal=False, 
                  super_resolution=True, add_title=False, baseline_style=False, genre_lora=False, 
                  use_template=False, template_path=None, use_flux=False, flux_model="black-forest-labs/FLUX.1-schnell",
-                 modern_text=False, enhanced_flux=False, style_preset='cinematic', poster_type='movie', auto_template=False):
+                 modern_text=False, enhanced_flux=False, style_preset='cinematic', poster_type='movie', auto_template=False,
+                 use_postero=False):
         print("Initializing Key2Poster Pipeline...")
-        print("Multi-Agent System (7 Agents):")
+        layout_system = 'PosterO (CVPR 2025)' if use_postero else 'Template-based'
+        print(f"Multi-Agent System (7 Agents) - Layout: {layout_system}")
         print("  Agent 1: Concept Expander (Sentiment Analysis + Thematic Expansion)")
         print(f"  Agent 2: Genre Classifier ({'Enabled' if genre_lora else 'Disabled'})")
         model_type = 'FLUX' if use_flux else ('Baseline' if baseline_style else 'Genre-LoRA' if genre_lora else 'LoRA' if use_lora else 'Standard')
@@ -51,6 +58,8 @@ class Key2PosterPipeline:
         self.poster_type = poster_type
         self.auto_template = auto_template
         self.template_gen = TemplateGenerator() if auto_template else None
+        self.use_postero = use_postero
+        self.postero = PosterOAdapter() if (use_postero and POSTERO_AVAILABLE) else None
         
         # Use FLUX with text generation if requested
         if use_flux:
@@ -95,13 +104,17 @@ class Key2PosterPipeline:
         
         start_time = time.time()
         
-        # Step 1: Select or generate template
+        # Step 1: Select or generate template (with PosterO support)
         import glob
         import json
         import random
         
         if template is None:
-            if self.auto_template and self.template_gen:
+            if self.use_postero and self.postero:
+                # PosterO will generate layout dynamically after image generation
+                template = {"size": [720, 1080], "layers": [], "use_postero": True}
+                print(f"\n[1/5] Using PosterO for dynamic layout generation")
+            elif self.auto_template and self.template_gen:
                 # Mix: 50% auto-generated, 50% existing templates
                 use_auto = random.random() < 0.5
                 
@@ -186,8 +199,15 @@ class Key2PosterPipeline:
         # Store FLUX image in brief for canvas editing
         brief['flux_image'] = image
         
-        # Step 5: Merge with template and add LLM-processed text
-        print(f"\n[5/5] Composing final poster...")
+        # Step 5: Generate layout with PosterO or use template
+        if template.get('use_postero') and self.postero:
+            print(f"\n[5/5] Generating layout with PosterO...")
+            layout = self.postero.generate_layout(image, keywords)
+            template = self.postero.layout_to_template(layout)
+            print(f"  Generated {len(layout['cls_elem'])} elements: {layout['cls_elem']}")
+        
+        # Step 6: Merge with template and add LLM-processed text
+        print(f"\nComposing final poster...")
         
         # Create poster from template
         from PIL import ImageDraw, ImageFont

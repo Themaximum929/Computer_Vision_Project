@@ -1,0 +1,53 @@
+{
+  "size": [
+    720,
+    1080
+  ],
+  "layers": [
+    {
+      "name": "Background",
+      "bbox": [
+        0,
+        0,
+        720,
+        1080
+      ]
+    },
+    {
+      "name": "Text",
+      "bbox": [
+        240,
+        930,
+        472,
+        989
+      ]
+    },
+    {
+      "name": "Text",
+      "bbox": [
+        240,
+        930,
+        472,
+        989
+      ]
+    },
+    {
+      "name": "Image",
+      "bbox": [
+        54,
+        59,
+        655,
+        873
+      ]
+    }
+  ],
+  "background_color": "#faefcf",
+  "fonts": {
+    "title": {
+      "family": "Graduate-Regular.ttf",
+      "size": 48,
+      "color": "#043bb4",
+      "align": "center"
+    }
+  }
+}
