@@ -6,14 +6,21 @@ __pycache__/
 .Python
 .venv/
 venv/
-ENV/
-.env
+env/
 
-# Models (too large for git)
+# Models (large files)
 models/
 *.pth
-*.safetensors
+*.pt
 *.ckpt
+*.safetensors
+*.bin
+
+# Datasets (large files)
+poster_dataset/
+datasets/
+data/
+*.parquet
 
 # Outputs
 outputs/
@@ -21,12 +28,8 @@ outputs/
 *.jpg
 *.jpeg
 
-# Data
-data/
-*.csv
-
-# Release files
-release.json
+# Templates (keep small JSON files)
+!templates/*.json
 
 # IDE
 .vscode/
@@ -38,6 +41,11 @@ release.json
 .DS_Store
 Thumbs.db
 
-# HF Space sync
-hf_space/
-hf_space
+# Logs
+*.log
+logs/
+checkpoints/
+
+# Temporary
+*.tmp
+.cache/
