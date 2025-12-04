@@ -49,3 +49,9 @@ checkpoints/
 # Temporary
 *.tmp
 .cache/
+# HF Space sync
+hf_space/
+hf_space
+
+# Dataset
+Dataset/
