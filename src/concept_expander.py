@@ -121,15 +121,9 @@ class ConceptExpander:
         except Exception as e:
             print(f"Error in concept expansion: {e}")
             # Fallback to basic format
-            return {
-                'description': prompt + f", {paint_style} style",
+            return{
+                'description': prompt,
                 'story title': ' '.join(prompt.split()[:3]).title(),
-                'captions': ["Coming Soon"],
-                'sentiment': 'neutral',
-                'confidence': 0.5,
-                'mood': 'neutral',
-                'themes': prompt
+                'captions': []
             }
-        
-        # Return the LLM response
         return response
