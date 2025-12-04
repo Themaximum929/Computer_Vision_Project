@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 from src.visual_generator_flux import VisualGeneratorFlux
 from src.pipeline import Key2PosterPipeline
-from src.clip_evaluator_LLC import CLIPEvaluatorLLC
+from src.clip_evaluator_LLC import CLIPEvaluatorLLC, compare_images
 
 
 def get_target_string(poster_type: str) -> str:
@@ -120,29 +120,23 @@ def test_flux_comparison(
     print(f"✓ Enhanced prompt used: {enhanced_prompt[:100]}...")
     print(f"✓ Pipeline FLUX poster saved to: {pipeline_output}\n")
     
-    # Step 4: Evaluate both with CLIP against target string
-    print("[4/5] Evaluating with CLIP against target string...")
-    print(f"Target: '{target_string}'\n")
+    # Step 4: Compare both images with CLIP against target string
+    print("[4/5] Comparing images with CLIP against target string...")
     
-    # Evaluate base FLUX image
-    print("-"*70)
-    print("EVALUATING BASE FLUX (direct user input)")
-    print("-"*70)
-    base_flux_score = evaluator.calculate_clip_score(base_flux_output, target_string)
-    print(f"CLIP Score: {base_flux_score:.2f}\n")
+    # Use the new compare_images function
+    comparison_result = evaluator.compare_images(
+        image1_path=base_flux_output,
+        image2_path=pipeline_output,
+        target_string=target_string
+    )
     
-    # Evaluate pipeline FLUX image
-    print("-"*70)
-    print("EVALUATING PIPELINE FLUX (enhanced prompt from pipeline)")
-    print("-"*70)
-    pipeline_score = evaluator.calculate_clip_score(pipeline_output, target_string)
-    print(f"CLIP Score: {pipeline_score:.2f}\n")
+    base_flux_score = comparison_result['image1_score']
+    pipeline_score = comparison_result['image2_score']
+    score_difference = comparison_result['difference']
+    improvement_percentage = comparison_result['improvement_percentage']
     
-    # Step 5: Comparison and results
-    print("[5/5] Generating comparison report...")
-    
-    score_difference = pipeline_score - base_flux_score
-    improvement_percentage = (score_difference / base_flux_score * 100) if base_flux_score > 0 else 0
+    # Step 5: Generate detailed comparison report
+    print("[5/5] Generating detailed comparison report...")
     
     # Print comparison summary
     print("\n" + "="*70)
@@ -193,20 +187,25 @@ def test_flux_comparison(
 
 
 if __name__ == "__main__":
-    # Test with example keywords
-    test_keywords = "house estate mansion"
-    poster_type = "product"
+    # # Test with example keywords
+    # test_keywords = ""
+    # poster_type = "movie"
     
-    result = test_flux_comparison(
-        user_input=test_keywords,
-        poster_type=poster_type,
-        img_size=(720, 1072),
-        seed=42  # Use fixed seed for reproducibility
+    # result = test_flux_comparison(
+    #     user_input=test_keywords,
+    #     poster_type=poster_type,
+    #     img_size=(720, 1072),
+    #     seed=42  # Use fixed seed for reproducibility
+    # )
+    
+    # print("\nTest completed! Check the evaluate/ directory for generated posters.")
+    # print(f"\nResults:")
+    # print(f"  Base FLUX Score: {result['base_flux_score']:.2f}")
+    # print(f"  Pipeline FLUX Score: {result['pipeline_score']:.2f}")
+    # print(f"  Improvement: {result['score_difference']:+.2f} ({result['improvement_percentage']:+.1f}%)")
+    
+    comparison_result = compare_images(
+        image1_path="evaluate/base_flux_1764349745.png",
+        image2_path="evaluate/pipeline_flux_1764349745.png",
+        target_string="movie poster with clear text description"
     )
-    
-    print("\nTest completed! Check the evaluate/ directory for generated posters.")
-    print(f"\nResults:")
-    print(f"  Base FLUX Score: {result['base_flux_score']:.2f}")
-    print(f"  Pipeline FLUX Score: {result['pipeline_score']:.2f}")
-    print(f"  Improvement: {result['score_difference']:+.2f} ({result['improvement_percentage']:+.1f}%)")
-

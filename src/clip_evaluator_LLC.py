@@ -256,7 +256,77 @@ class CLIPEvaluatorLLC:
         print(f"{'='*60}\n")
         
         return results
-
+    
+    def compare_images(
+        self,
+        image1_path: Union[str, Image.Image],
+        image2_path: Union[str, Image.Image],
+        target_string: str
+    ) -> Dict[str, float]:
+        """
+        Compare two images directly using CLIP scores against a target string.
+        
+        This is a convenience function for comparing two generated images
+        (e.g., base FLUX vs pipeline FLUX) against a standard target.
+        
+        Args:
+            image1_path: First image (file path or PIL Image)
+            image2_path: Second image (file path or PIL Image)
+            target_string: Target string for CLIP evaluation (e.g., "movie poster")
+            
+        Returns:
+            Dictionary containing:
+                - image1_score: CLIP score for first image
+                - image2_score: CLIP score for second image
+                - difference: Difference (image2 - image1)
+                - improvement_percentage: Percentage improvement
+                
+        Example:
+            >>> result = evaluator.compare_images(
+            ...     "evaluate/base_flux_123.png",
+            ...     "evaluate/pipeline_flux_123.png",
+            ...     "movie poster"
+            ... )
+            >>> print(f"Base: {result['image1_score']:.2f}")
+            >>> print(f"Pipeline: {result['image2_score']:.2f}")
+            >>> print(f"Difference: {result['difference']:+.2f}")
+        """
+        print("\n" + "="*70)
+        print("CLIP SCORE COMPARISON: TWO IMAGES")
+        print("="*70)
+        print(f"Target String: '{target_string}'")
+        print(f"Image 1: {image1_path if isinstance(image1_path, str) else 'PIL Image'}")
+        print(f"Image 2: {image2_path if isinstance(image2_path, str) else 'PIL Image'}")
+        print("="*70 + "\n")
+        
+        # Calculate CLIP scores
+        print("Calculating CLIP scores...")
+        image1_score = self.calculate_clip_score(image1_path, target_string)
+        image2_score = self.calculate_clip_score(image2_path, target_string)
+        
+        # Calculate difference
+        difference = image2_score - image1_score
+        improvement_percentage = (difference / image1_score * 100) if image1_score > 0 else 0
+        
+        result = {
+            'image1_score': image1_score,
+            'image2_score': image2_score,
+            'difference': difference,
+            'improvement_percentage': improvement_percentage,
+            'target_string': target_string
+        }
+        
+        # Print results
+        print("\n" + "="*70)
+        print("COMPARISON RESULTS")
+        print("="*70)
+        print(f"{'Image 1 Score':<30} {image1_score:.2f}")
+        print(f"{'Image 2 Score':<30} {image2_score:.2f}")
+        print(f"{'Difference (Image2 - Image1)':<30} {difference:+.2f} ({improvement_percentage:+.1f}%)")
+        print("="*70 + "\n")
+        
+        return result
+    
 
 # Convenience function for quick evaluation
 def evaluate_poster(
@@ -285,6 +355,36 @@ def evaluate_poster(
     """
     evaluator = CLIPEvaluatorLLC()
     return evaluator.compare_prompts(image_path, original_prompt, enhanced_prompt)
+
+
+# Convenience function for comparing two images
+def compare_images(
+    image1_path: Union[str, Image.Image],
+    image2_path: Union[str, Image.Image],
+    target_string: str
+) -> Dict[str, float]:
+    """
+    Quick function to compare two images using CLIP scores against a target string.
+    
+    Args:
+        image1_path: First image (file path or PIL Image)
+        image2_path: Second image (file path or PIL Image)
+        target_string: Target string for CLIP evaluation (e.g., "movie poster")
+        
+    Returns:
+        Comparison results dictionary
+        
+    Example:
+        >>> from src.clip_evaluator_LLC import compare_images
+        >>> result = compare_images(
+        ...     "evaluate/base_flux_123.png",
+        ...     "evaluate/pipeline_flux_123.png",
+        ...     "movie poster"
+        ... )
+        >>> print(f"Difference: {result['difference']:+.2f}")
+    """
+    evaluator = CLIPEvaluatorLLC()
+    return evaluator.compare_images(image1_path, image2_path, target_string)
 
 
 if __name__ == "__main__":
