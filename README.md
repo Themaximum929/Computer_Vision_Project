@@ -29,6 +29,7 @@ Open: **http://localhost:7860**
 ✅ **Interactive Canvas Editor** - Drag, resize, and edit poster elements  
 ✅ **LLM Text Processing** - Intelligent title generation from keywords  
 ✅ **Aesthetic Scoring** - Automated quality evaluation  
+✅ **PosterO Generalized Layouts** - LLM-based content-aware layout generation (NEW)  
 
 ---
 
@@ -36,9 +37,10 @@ Open: **http://localhost:7860**
 
 ### Web Interface (Recommended)
 ```bash
-python app.py              # HuggingFace Space (GPU required)
-python app_template.py     # Template editor with canvas
-python app_flux.py         # Original FLUX interface
+python app.py                      # HuggingFace Space (GPU required)
+python app_template.py             # Template editor with canvas
+python app_postero_generalized.py  # PosterO Generalized layouts (NEW)
+python app_flux.py                 # Original FLUX interface
 ```
 
 ### Python API
@@ -215,6 +217,8 @@ python app.py
 ## Documentation
 
 - **PIPELINE_CHANGES.md** - New 5-step pipeline details
+- **POSTERO_GENERALIZED_QUICKSTART.md** - PosterO Generalized setup (NEW)
+- **POSTERO_GENERALIZED_SETUP.md** - Detailed PosterO integration guide
 - **requirements.txt** - Dependencies (includes sentencepiece)
 - **templates/** - Poster layout templates
 
@@ -297,4 +301,55 @@ python app.py  # HuggingFace Space
 ✅ **Extensible prompt enhancement** - Easy for teammates to improve  
 ✅ **Interactive canvas editor** - Full control over final design  
 ✅ **GPU-optimized** - Fast generation with CUDA acceleration  
-✅ **HuggingFace Space ready** - Deploy with @spaces.GPU decorator
+✅ **HuggingFace Space ready** - Deploy with @spaces.GPU decorator  
+✅ **PosterO Generalized** - LLM-based content-aware layout generation (NEW)
+
+---
+
+## PosterO Generalized Layout Generation (NEW)
+
+Generate content-aware layouts using LLM-based in-context learning with PStylish7 dataset.
+
+### Quick Start
+
+```bash
+# Install dependencies
+pip install vllm transformers accelerate
+
+# Run generation
+./run_postero_generalized.sh
+
+# Or use Python API
+python test_postero_generalized.py
+```
+
+### 7 Categories Available
+
+1. **chinese-poem** - Cultural education
+2. **food-menu** - Merchandising display
+3. **kind-animals** - Public advocacy
+4. **london-subway** - Public safety
+5. **motivational-quote** - Social media
+6. **movie-poster** - Entertainment marketing
+7. **travel-vintage** - Artwork exhibition
+
+### Python API
+
+```python
+from src.postero_generalized import PosterOGeneralized
+
+gen = PosterOGeneralized(
+    llm_path="/path/to/mistral-7b",
+    dataset_root="./PStylish7"
+)
+
+layout = gen.generate_layout(
+    category="movie-poster",
+    num_elements=3,
+    sample_size=10
+)
+
+print(f"Generated {len(layout['bboxes'])} elements")
+```
+
+**See:** `POSTERO_GENERALIZED_QUICKSTART.md` for detailed setup

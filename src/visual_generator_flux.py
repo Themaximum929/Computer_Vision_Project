@@ -5,7 +5,7 @@ from diffusers import FluxPipeline
 from PIL import Image
 
 class VisualGeneratorFlux:
-    def __init__(self, model_id="black-forest-labs/FLUX.1-schnell"):
+    def __init__(self, model_id="black-forest-labs/FLUX.1-schnell", hf_token=None):
         """
         Initialize FLUX.1 generator
         
@@ -16,9 +16,14 @@ class VisualGeneratorFlux:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         print(f"Using device: {self.device}")
         
+        # Get token from env or parameter
+        if hf_token is None:
+            hf_token = os.getenv("HF_TOKEN")
+        
         self.pipe = FluxPipeline.from_pretrained(
             model_id,
-            torch_dtype=torch.bfloat16 if self.device == "cuda" else torch.float32
+            torch_dtype=torch.bfloat16 if self.device == "cuda" else torch.float32,
+            token=hf_token
         )
         
         # Balanced: Speed + Memory efficiency
