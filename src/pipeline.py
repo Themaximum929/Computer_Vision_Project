@@ -193,8 +193,9 @@ class Key2PosterPipeline:
         else:
             poster_prompt = f"{brief['description']}, no text, no words, no letters"
         
-        # Generate image (FLUX will be resized to fit template)
-        image = self.generator.generate(poster_prompt, width=image_size[0], height=image_size[1], seed=seed)
+        # Generate image at template size
+        flux_image = self.generator.generate(poster_prompt, seed=seed, width=image_size[0], height=image_size[1])
+        print(f"  ✓ Generated at {image_size}")
         
         # Store FLUX image in brief for canvas editing
         brief['flux_image'] = image
