@@ -4,54 +4,118 @@ __pycache__/
 *$py.class
 *.so
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
 .venv/
 venv/
+ENV/
 env/
-
-# Models (large files)
-models/
-*.pth
-*.pt
-*.ckpt
-*.safetensors
-*.bin
-
-# Datasets (large files)
-poster_dataset/
-datasets/
-data/
-*.parquet
-
-# Outputs
-outputs/
-*.png
-*.jpg
-*.jpeg
-
-# Templates (keep small JSON files)
-!templates/*.json
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# OS
+*~
 .DS_Store
-Thumbs.db
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environment variables
+.env
+.env.local
+
+# Model checkpoints and weights
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+models/
+checkpoints/
+
+# Generated outputs
+outputs/
+temp_*.png
+test_image_*.png
+result_*_*.png
+result_*_*.svg
+combined_*.png
+combined_*.svg
+*_with_text.png
 
 # Logs
 *.log
 logs/
-checkpoints/
+wandb/
 
-# Temporary
-*.tmp
+# Data
+data/
+dataset/
+datasets/
+src/Dataset/
+*.csv
+*.json.bak
+
+# Hugging Face cache
 .cache/
-# HF Space sync
-hf_space/
-hf_space
+huggingface/
 
-# Dataset
-Dataset/
+# Large files
+*.tar
+*.tar.gz
+*.zip
+*.rar
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# PosterO specific
+PosterO/PStylish7/
+PosterO/PKU/
+PosterO/*.pth
+PosterO/design_intent_detect/pku_*/
+
+# Test outputs
+test_*.png
+pipeline_test_*.png
+underlay_test_*.png
+editable_*.png
+editable_*.json
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# Documentation builds
+docs/_build/
+site/

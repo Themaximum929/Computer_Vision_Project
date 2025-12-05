@@ -148,7 +148,10 @@ class Key2PosterPipeline:
         img_layer = next((l for l in template['layers'] if 'image' in l['name'].lower()), None)
         if img_layer:
             img_bbox = img_layer['bbox']
-            image_size = (img_bbox[2] - img_bbox[0], img_bbox[3] - img_bbox[1])
+            w = img_bbox[2] - img_bbox[0]
+            h = img_bbox[3] - img_bbox[1]
+            # Round to multiples of 8 for FLUX compatibility
+            image_size = ((w // 8) * 8, (h // 8) * 8)
         else:
             image_size = (512, 512)
         print(f"  Image region size: {image_size}")
@@ -193,9 +196,16 @@ class Key2PosterPipeline:
         else:
             poster_prompt = f"{brief['description']}, no text, no words, no letters"
         
-        # Generate image at template size
-        flux_image = self.generator.generate(poster_prompt, seed=seed, width=image_size[0], height=image_size[1])
+        # Generate image at template size (already rounded to multiples of 8)
+        image = self.generator.generate(poster_prompt, seed=seed, width=image_size[0], height=image_size[1])
         print(f"  ✓ Generated at {image_size}")
+        
+        # Resize to exact template bbox size if needed
+        if img_layer:
+            exact_w = img_bbox[2] - img_bbox[0]
+            exact_h = img_bbox[3] - img_bbox[1]
+            if (exact_w, exact_h) != image_size:
+                image = image.resize((exact_w, exact_h), Image.LANCZOS)
         
         # Store FLUX image in brief for canvas editing
         brief['flux_image'] = image

@@ -1,0 +1,36 @@
+{
+  "size": [
+    720,
+    1080
+  ],
+  "layers": [
+    {
+      "name": "Background",
+      "bbox": [
+        0,
+        0,
+        720,
+        1080
+      ]
+    },
+    {
+      "name": "Image",
+      "bbox": [
+        122,
+        158,
+        598,
+        760
+      ]
+    },
+    {
+      "name": "Text_1",
+      "bbox": [
+        194,
+        895,
+        526,
+        976
+      ]
+    }
+  ],
+  "background_color": "#faefcf"
+}

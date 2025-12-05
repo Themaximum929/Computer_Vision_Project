@@ -7,6 +7,11 @@ class TemplateGenerator:
     
     LAYOUT_TYPES = ['split', 'grid', 'hero', 'sidebar', 'asymmetric', 'minimal']
     
+    @staticmethod
+    def _round_to_8(value):
+        """Round dimension to nearest multiple of 8 for FLUX compatibility"""
+        return (value // 8) * 8
+    
     LAYOUT_RULES = {
         'movie': {'layouts': ['hero', 'split', 'grid'], 'text_align': ['center', 'left'], 'colors': ['#1a1a2e', '#faefcf']},
         'music': {'layouts': ['asymmetric', 'sidebar', 'hero'], 'text_align': ['left', 'right'], 'colors': ['#0f0f23', '#ff6b6b']},
@@ -39,11 +44,13 @@ class TemplateGenerator:
     def _split_layout(self, w, h):
         mid = h // 2
         margin = 40
+        img_w = self._round_to_8(w - 2 * margin)
+        img_h = self._round_to_8(mid - margin - 20)
         return {
             'size': [w, h],
             'layers': [
                 {'name': 'Background', 'bbox': [0, 0, w, h]},
-                {'name': 'Image', 'bbox': [margin, margin, w - margin, mid - 20]},
+                {'name': 'Image', 'bbox': [margin, margin, margin + img_w, margin + img_h]},
                 {'name': 'Text', 'bbox': [margin * 2, mid + 40, w - margin * 2, mid + 100]},
                 {'name': 'Caption', 'bbox': [margin * 2, mid + 120, w - margin * 2, h - margin]}
             ]
@@ -51,11 +58,13 @@ class TemplateGenerator:
     
     def _grid_layout(self, w, h):
         margin = 50
+        img_w = self._round_to_8(w - 2 * margin)
+        img_h = self._round_to_8(h - margin * 2 - 200)
         return {
             'size': [w, h],
             'layers': [
                 {'name': 'Background', 'bbox': [0, 0, w, h]},
-                {'name': 'Image', 'bbox': [margin, margin * 2, w - margin, h - 200]},
+                {'name': 'Image', 'bbox': [margin, margin * 2, margin + img_w, margin * 2 + img_h]},
                 {'name': 'Text', 'bbox': [margin * 2, h - 180, w - margin * 2, h - 120]},
                 {'name': 'Caption', 'bbox': [margin * 2, h - 100, w - margin * 2, h - margin]}
             ]
@@ -63,11 +72,13 @@ class TemplateGenerator:
     
     def _hero_layout(self, w, h):
         margin = 30
+        img_w = self._round_to_8(w - 2 * margin)
+        img_h = self._round_to_8(h - margin - 250)
         return {
             'size': [w, h],
             'layers': [
                 {'name': 'Background', 'bbox': [0, 0, w, h]},
-                {'name': 'Image', 'bbox': [margin, margin, w - margin, h - 250]},
+                {'name': 'Image', 'bbox': [margin, margin, margin + img_w, margin + img_h]},
                 {'name': 'Text', 'bbox': [margin * 2, h - 220, w - margin * 2, h - 150]},
                 {'name': 'Caption', 'bbox': [margin * 2, h - 130, w - margin * 2, h - margin * 2]}
             ]
@@ -76,11 +87,13 @@ class TemplateGenerator:
     def _sidebar_layout(self, w, h):
         split = int(w * 0.6)
         margin = 40
+        img_w = self._round_to_8(split - margin - 20)
+        img_h = self._round_to_8(h - 2 * margin)
         return {
             'size': [w, h],
             'layers': [
                 {'name': 'Background', 'bbox': [0, 0, w, h]},
-                {'name': 'Image', 'bbox': [margin, margin, split - 20, h - margin]},
+                {'name': 'Image', 'bbox': [margin, margin, margin + img_w, margin + img_h]},
                 {'name': 'Text', 'bbox': [split + 20, h // 3, w - margin, h // 3 + 80]},
                 {'name': 'Caption', 'bbox': [split + 20, h // 3 + 100, w - margin, h - margin]}
             ]
@@ -89,11 +102,13 @@ class TemplateGenerator:
     def _asymmetric_layout(self, w, h):
         margin = 35
         offset = 80
+        img_w = self._round_to_8(w - margin - offset)
+        img_h = self._round_to_8(h - margin - 280)
         return {
             'size': [w, h],
             'layers': [
                 {'name': 'Background', 'bbox': [0, 0, w, h]},
-                {'name': 'Image', 'bbox': [offset, margin, w - margin, h - 280]},
+                {'name': 'Image', 'bbox': [offset, margin, offset + img_w, margin + img_h]},
                 {'name': 'Text', 'bbox': [margin, h - 250, w - offset, h - 180]},
                 {'name': 'Caption', 'bbox': [margin, h - 160, w - offset, h - margin * 2]}
             ]
@@ -101,11 +116,13 @@ class TemplateGenerator:
     
     def _minimal_layout(self, w, h):
         margin = 80
+        img_w = self._round_to_8(w - 2 * margin)
+        img_h = self._round_to_8(h - margin * 2 - 300)
         return {
             'size': [w, h],
             'layers': [
                 {'name': 'Background', 'bbox': [0, 0, w, h]},
-                {'name': 'Image', 'bbox': [margin, margin * 2, w - margin, h - 300]},
+                {'name': 'Image', 'bbox': [margin, margin * 2, margin + img_w, margin * 2 + img_h]},
                 {'name': 'Text', 'bbox': [margin * 2, h - 250, w - margin * 2, h - 180]},
                 {'name': 'Caption', 'bbox': [margin * 2, h - 160, w - margin * 2, h - margin * 2]}
             ]
