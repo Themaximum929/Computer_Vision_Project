@@ -91,11 +91,11 @@ tmp/
 temp/
 *.tmp
 
-# PosterO specific
-PosterO/PStylish7/
-PosterO/PKU/
-PosterO/*.pth
-PosterO/design_intent_detect/pku_*/
+# PosterO specific (install separately)
+PosterO/
+
+# RALF specific (install separately)
+RALF/
 
 # Test outputs
 test_*.png
