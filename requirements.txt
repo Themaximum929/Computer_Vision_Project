@@ -1,35 +1,33 @@
-# PyTorch (CUDA 12.x recommended)
-torch==2.9.0
-torchvision==0.24.0
-# Install with: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+# Core Dependencies
+torch>=2.0.0
+torchvision>=0.15.0
+diffusers>=0.25.0
+transformers>=4.35.0
+accelerate>=0.25.0
 
-# Core ML/AI packages
-diffusers==0.35.2
-transformers==4.57.1
-accelerate==1.11.0
-peft==0.17.1
-safetensors==0.6.2
+# Image Processing
+Pillow>=10.0.0
+opencv-python>=4.8.0
+scipy>=1.11.0
+numpy>=1.24.0
 
-# Image processing
-opencv-python==4.12.0.88
-pillow==11.3.0
-numpy==2.2.6
-
-# Web interface
-gradio==5.49.1
-
-# Data processing
-beautifulsoup4==4.14.2
-requests==2.32.5
-tqdm==4.67.1
-scikit-learn==1.7.2
-
-# Optional OCR (for text detection)
-pytesseract==0.3.13
+# Web Interface
+gradio>=4.0.0
 
 # Utilities
-huggingface-hub==0.36.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+tqdm>=4.66.0
 
-# Tokenizer dependencies
-sentencepiece>=0.2.0
+# Text Processing
+sentencepiece>=0.1.99
 protobuf>=4.25.0
+
+# Optional: PosterO LLM
+fastapi-poe>=0.0.36
+
+# Optional: Super Resolution
+realesrgan>=0.3.0
+
+# Optional: Text Removal
+lama-cleaner>=1.0.0

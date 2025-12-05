@@ -1,355 +1,388 @@
-# Key2Poster: AI Poster Generator
+# Key2Poster: AI-Powered Poster Generation System
 
-Generate professional posters from 2-5 keywords using **FLUX.1** with **template-based composition**.
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![FLUX.1](https://img.shields.io/badge/FLUX.1-schnell-green.svg)](https://huggingface.co/black-forest-labs/FLUX.1-schnell)
+[![PosterO](https://img.shields.io/badge/PosterO-CVPR%202025-red.svg)](https://github.com/PKU-ICST-MIPL/PosterO_CVPR2025)
 
-**Poster Types:** Movie, Advertise, Event, Education, Social, Music, Sports
+Generate professional posters from 2-5 keywords using state-of-the-art AI models with three different layout generation methods.
 
-## Quick Start
+## 🌟 Features
+
+- **3 Generation Modes**
+  - 🎨 Template Mode: Fast generation with editable text layers
+  - 🤖 LayoutGAN Mode: Auto-generated adaptive layouts
+  - 🔬 PosterO Mode: Content-aware AI layout (CVPR 2025)
+
+- **Advanced Capabilities**
+  - ✅ FLUX.1 high-quality image generation
+  - ✅ LLM-based prompt enhancement
+  - ✅ Interactive text editing (position, size, color)
+  - ✅ Multiple poster types (Movie, Event, Product, Music, Sports, etc.)
+  - ✅ 7 style presets (Cinematic, Neon, Vintage, Minimalist, etc.)
+  - ✅ 720x1280 standardized output
+
+## 📋 Requirements
+
+- **GPU**: CUDA-enabled GPU (FLUX.1 requires ~23GB VRAM)
+- **OS**: Linux
+- **Python**: 3.10+
+
+## 🚀 Installation
+
+### 1. Clone Repository
 
 ```bash
-pip install -r requirements.txt
-pip install sentencepiece protobuf  # Required for FLUX
-python app.py  # HuggingFace Space version
+git clone https://github.com/yourusername/Computer_Vision_Project.git
+cd Computer_Vision_Project
+```
+
+### 2. Create Virtual Environment
+
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Linux/macOS
 # OR
-python app_template.py  # Template editor version
-```
-Open: **http://localhost:7860**
-
-⚠️ **GPU Required**: FLUX.1 requires CUDA-enabled GPU
-
----
-
-## Features
-
-✅ **Template-Based Composition** - Random template selection with professional layouts  
-✅ **FLUX.1 Image Generation** - High-quality image generation with CUDA acceleration  
-✅ **Smart Prompt Enhancement** - Sentiment analysis + thematic expansion (extensible)  
-✅ **Multiple Poster Types** - Movie, Advertise, Event, Education, Social, Music, Sports  
-✅ **7 Style Presets** - Cinematic, Minimalist, Neon, Dark, Vintage, Bright, Professional  
-✅ **Interactive Canvas Editor** - Drag, resize, and edit poster elements  
-✅ **LLM Text Processing** - Intelligent title generation from keywords  
-✅ **Aesthetic Scoring** - Automated quality evaluation  
-✅ **PosterO Generalized Layouts** - LLM-based content-aware layout generation (NEW)  
-
----
-
-## Applications
-
-### Web Interface (Recommended)
-```bash
-python app.py                      # HuggingFace Space (GPU required)
-python app_template.py             # Template editor with canvas
-python app_postero_generalized.py  # PosterO Generalized layouts (NEW)
-python app_flux.py                 # Original FLUX interface
+.venv\Scripts\activate  # Windows
 ```
 
-### Python API
-```python
-from src.pipeline import Key2PosterPipeline
+### 3. Install Dependencies
 
-# Template-based generation (NEW)
-pipeline = Key2PosterPipeline(
-    use_flux=True,
-    add_title=False,  # Text added via template
-    genre_lora=False,
-    remove_text=True,
-    aggressive_text_removal=True
-)
-
-image, brief, metrics = pipeline.generate_poster(
-    "summer sale event",
-    output_path="poster.png",
-    seed=42
-)
-
-# Template info available in brief['template']
-print(f"Template size: {brief['template']['size']}")
-```
-
----
-
-## Poster Types
-
-| Type | Description | Best For |
-|------|-------------|----------|
-| Movie | Cinematic poster design | Films, entertainment |
-| Advertise | Commercial design | Products, sales |
-| Event | Promotional design | Concerts, festivals |
-| Education | Informative layout | Schools, training |
-| Social | Awareness campaigns | Causes, movements |
-| Music | Concert poster | Bands, festivals |
-| Sports | Athletic design | Games, competitions |
-
----
-
-## Style Presets
-
-| Style | Description |
-|-------|-------------|
-| Cinematic | Dramatic lighting, high contrast |
-| Minimalist | Clean composition, negative space |
-| Neon | Vibrant neon colors, cyberpunk |
-| Dark | Moody atmosphere, noir style |
-| Vintage | Retro style, grain texture |
-| Bright | High energy, cheerful |
-| Professional | Corporate, polished |
-
----
-
-## New Pipeline (5 Steps)
-
-### 1. **Template Selection**
-- Randomly selects poster template from `templates/` folder
-- Extracts image region dimensions and text placement
-- Supports multiple layout variations
-
-### 2. **Prompt Enhancement** 🔧 TODO
-- Current: Basic sentiment analysis + thematic expansion
-- **Extensible**: Teammates can enhance `src/concept_expander.py`
-- Receives template image size for context-aware enhancement
-- Returns enhanced prompt optimized for FLUX generation
-
-### 3. **FLUX Image Generation**
-- Generates high-quality image using FLUX.1-schnell
-- Automatically resizes to fit template's image region
-- Clean image without text (text added separately)
-
-### 4. **Template Composition**
-- Merges FLUX image with template background
-- Places image in designated region from template
-- Adds LLM-processed text overlay with proper positioning
-
-### 5. **Quality Evaluation**
-- Aesthetic scoring
-- Resolution validation
-- Saves final composed poster
-
----
-
-## Template System
-
-### Template Structure
-Templates are JSON files in `templates/` folder:
-```json
-{
-  "size": [720, 1080],
-  "layers": [
-    {
-      "name": "Background",
-      "bbox": [0, 0, 720, 1080]
-    },
-    {
-      "name": "Image",
-      "bbox": [54, 59, 655, 873]
-    },
-    {
-      "name": "Text",
-      "bbox": [240, 930, 472, 989]
-    }
-  ]
-}
-```
-
-### Adding New Templates
-1. Create `templates/templateN_layers.json`
-2. Define poster size and layer bounding boxes
-3. Pipeline automatically detects and uses new templates
-
----
-
-## Project Structure
-
-```
-├── src/
-│   ├── pipeline.py                  # Main orchestrator (5-step pipeline)
-│   ├── concept_expander.py          # Prompt enhancement (TODO: extend here)
-│   ├── visual_generator_flux.py     # FLUX.1 image generation
-│   ├── evaluator.py                 # Quality evaluation
-│   └── ...
-├── templates/
-│   ├── template1_layers.json        # Poster layout templates
-│   ├── template2_layers.json
-│   └── ...
-├── fonts/
-│   └── Graduate-Regular.ttf         # Text overlay font
-├── app.py                           # HuggingFace Space (GPU)
-├── app_template.py                  # Template editor with canvas
-├── app_flux.py                      # Original FLUX interface
-└── requirements.txt                 # Dependencies
-```
-
----
-
-## Performance
-
-| Hardware | Time per Poster |
-|----------|----------------|
-| RTX 3090 | ~10-15s |
-| RTX 4090 | ~8-12s |
-| RTX 3060 | ~20-30s |
-| CPU | ❌ Not supported (GPU required) |
-
----
-
-## Examples
-
-```bash
-# Template-based generation
-python app_template.py
-# Input: "anime love story japanese"
-# Output: Random template + FLUX image + title overlay
-
-# HuggingFace Space
-python app.py
-# Input: "cyberpunk neon city"
-# Type: Movie, Style: Neon
-# Output: Professional poster with template composition
-```
-
-### Canvas Editor Features
-- 🖱️ Drag elements to reposition
-- 🔄 Resize with corner handles
-- 🖊️ Double-click text to edit
-- 💾 Export final poster as PNG
-
----
-
-## Documentation
-
-- **PIPELINE_CHANGES.md** - New 5-step pipeline details
-- **POSTERO_GENERALIZED_QUICKSTART.md** - PosterO Generalized setup (NEW)
-- **POSTERO_GENERALIZED_SETUP.md** - Detailed PosterO integration guide
-- **requirements.txt** - Dependencies (includes sentencepiece)
-- **templates/** - Poster layout templates
-
-## For Teammates: Extending Prompt Enhancement
-
-To enhance the prompt generation (Step 2), modify `src/concept_expander.py`:
-
-```python
-def expand(self, keywords, image_size=None):
-    # Current: Basic sentiment + themes
-    # TODO: Add your advanced enhancement here
-    # - Use image_size for context
-    # - Add more sophisticated NLP
-    # - Integrate external APIs
-    # - Optimize for FLUX generation
-    
-    return {
-        'prompt': enhanced_prompt,
-        'sentiment': sentiment,
-        'confidence': confidence,
-        'mood': mood,
-        'themes': themes
-    }
-```
-
-The pipeline will automatically use your enhanced prompts!
-
----
-
-## Models
-
-- **FLUX.1-schnell** - Fast image generation (4 steps, ~23GB VRAM)
-- **Graduate-Regular.ttf** - Text overlay font
-- **Templates** - JSON-based layout definitions
-
----
-
-## Troubleshooting
-
-### "CUDA not available" Error
 ```bash
 # Install PyTorch with CUDA support
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
-```
 
-### "Cannot instantiate tokenizer" Error
-```bash
-# Install missing dependencies
-pip install sentencepiece protobuf
-```
-
-### "No module named 'src'" Error
-```bash
-# Run from project root, not from src/ folder
-cd Computer_Vision_Project
-python app.py
-```
-
----
-
-## Summary
-
-```bash
-# Quick Start
+# Install project dependencies
 pip install -r requirements.txt
+
+# Install additional dependencies for FLUX
 pip install sentencepiece protobuf
-python app_template.py  # Template editor
-# OR
-python app.py  # HuggingFace Space
+
+# Install PosterO dependencies (optional)
+pip install vllm transformers accelerate
 ```
 
-**Result:** Professional template-based posters with FLUX.1 generation! 🎨
+### 4. Setup API Keys
 
----
-
-## Key Improvements
-
-✅ **Template-based composition** - Consistent professional layouts  
-✅ **Random template selection** - Variety in every generation  
-✅ **Extensible prompt enhancement** - Easy for teammates to improve  
-✅ **Interactive canvas editor** - Full control over final design  
-✅ **GPU-optimized** - Fast generation with CUDA acceleration  
-✅ **HuggingFace Space ready** - Deploy with @spaces.GPU decorator  
-✅ **PosterO Generalized** - LLM-based content-aware layout generation (NEW)
-
----
-
-## PosterO Generalized Layout Generation (NEW)
-
-Generate content-aware layouts using LLM-based in-context learning with PStylish7 dataset.
-
-### Quick Start
+Create `.env` file in project root:
 
 ```bash
-# Install dependencies
-pip install vllm transformers accelerate
-
-# Run generation
-./run_postero_generalized.sh
-
-# Or use Python API
-python test_postero_generalized.py
+# POE API Key (for PosterO LLM)
+POE_API_KEY=your_poe_api_key_here
 ```
 
-### 7 Categories Available
+### 5. Download Models
 
-1. **chinese-poem** - Cultural education
-2. **food-menu** - Merchandising display
-3. **kind-animals** - Public advocacy
-4. **london-subway** - Public safety
-5. **motivational-quote** - Social media
-6. **movie-poster** - Entertainment marketing
-7. **travel-vintage** - Artwork exhibition
+Models will be automatically downloaded on first run:
+- FLUX.1-schnell (~23GB)
+- Design intent detection model (for PosterO)
 
-### Python API
+## 🎯 Quick Start
+
+### Unified App (Recommended)
+
+Launch the unified interface with all 3 modes:
+
+```bash
+python app_unified.py
+```
+
+Open browser: `http://localhost:7860`
+
+### Individual Apps
+
+```bash
+# Template Mode with editing
+python app_editable.py
+
+# PosterO Mode
+python app.py
+
+# LayoutGAN Mode
+python app_clg_lo.py
+```
+
+## 📖 Usage Guide
+
+### 1. Template Mode (Editable)
+
+**Best for**: Quick generation with full editing control
 
 ```python
-from src.postero_generalized import PosterOGeneralized
+from src.pipeline import Key2PosterPipeline
 
-gen = PosterOGeneralized(
-    llm_path="/path/to/mistral-7b",
-    dataset_root="./PStylish7"
+pipeline = Key2PosterPipeline(
+    use_flux=True,
+    use_template=True,
+    add_title=True,
+    poster_type='movie',
+    style_preset='cinematic'
 )
 
-layout = gen.generate_layout(
-    category="movie-poster",
-    num_elements=3,
-    sample_size=10
+image, brief, metrics = pipeline.generate_poster(
+    keywords="cyberpunk neon city",
+    output_path="outputs/poster.png",
+    seed=42
 )
-
-print(f"Generated {len(layout['bboxes'])} elements")
 ```
 
-**See:** `POSTERO_GENERALIZED_QUICKSTART.md` for detailed setup
+**Features**:
+- ⚡ Fast generation (~10-15s)
+- ✏️ Interactive text editing
+- 🎨 Position/size/color controls
+- 💾 Export with metadata
+
+### 2. LayoutGAN Mode
+
+**Best for**: Adaptive layouts with auto-generation
+
+```python
+pipeline = Key2PosterPipeline(
+    use_flux=True,
+    auto_template=True,
+    add_title=True,
+    poster_type='event',
+    style_preset='bright'
+)
+
+image, brief, metrics = pipeline.generate_poster(
+    keywords="music festival summer",
+    output_path="outputs/poster.png",
+    seed=42
+)
+```
+
+**Features**:
+- 🤖 Auto-generated layouts
+- 📐 Content-adaptive positioning
+- ⚡ Medium speed (~20-30s)
+
+### 3. PosterO Mode (CVPR 2025)
+
+**Best for**: Highest quality with content-aware layouts
+
+```python
+from src.pipeline_postero import Key2PosterPosterO
+
+pipeline = Key2PosterPosterO(
+    poster_type='movie',
+    style_preset='cinematic'
+)
+
+image, brief, metrics = pipeline.generate_poster(
+    keywords="vintage travel mountains",
+    output_path="outputs/poster.png",
+    seed=42
+)
+```
+
+**Features**:
+- 🔬 State-of-the-art AI layout
+- 🎯 Content-aware positioning
+- ⭐ Highest quality (~30-40s)
+- 📊 Automatic text/logo/underlay detection
+
+## 🎨 Poster Types
+
+| Type | Description | Best For |
+|------|-------------|----------|
+| Movie | Cinematic design | Films, entertainment |
+| Event | Promotional layout | Concerts, festivals |
+| Product | Commercial design | Sales, advertising |
+| Music | Concert poster | Bands, albums |
+| Sports | Athletic design | Games, competitions |
+| Book | Literary design | Books, publications |
+| Theater | Stage performance | Plays, shows |
+| Conference | Professional layout | Business events |
+| Festival | Celebration design | Cultural events |
+| Game | Gaming aesthetic | Video games |
+
+## 🎭 Style Presets
+
+| Style | Description | Visual Effect |
+|-------|-------------|---------------|
+| Cinematic | Dramatic lighting | High contrast, moody |
+| Minimalist | Clean composition | Negative space, simple |
+| Neon | Vibrant colors | Cyberpunk, glowing |
+| Dark | Moody atmosphere | Noir, mysterious |
+| Vintage | Retro style | Grain, aged look |
+| Bright | High energy | Cheerful, colorful |
+| Professional | Corporate polish | Clean, business-like |
+
+## 📁 Project Structure
+
+```
+Computer_Vision_Project/
+├── src/
+│   ├── pipeline.py                    # Main pipeline
+│   ├── pipeline_postero.py            # PosterO pipeline
+│   ├── pipeline_postero_underlay.py   # PosterO with underlay
+│   ├── concept_expander.py            # LLM prompt enhancement
+│   ├── visual_generator_flux.py       # FLUX image generation
+│   ├── template_generator.py          # Auto template generation
+│   ├── evaluator.py                   # Quality evaluation
+│   └── ...
+├── PosterO/                           # PosterO integration
+│   ├── main.py                        # PosterO main script
+│   ├── llm_api_wrapper.py            # POE API wrapper
+│   ├── design_intent_detect/         # Part 1: Detection
+│   └── generalized_setting/          # Part 2: Generation
+├── templates/                         # Poster templates
+│   ├── template1_layers.json
+│   └── ...
+├── fonts/                             # Font files
+│   └── Graduate-Regular.ttf
+├── outputs/                           # Generated posters
+├── app_unified.py                     # Unified interface (3 modes)
+├── app_editable.py                    # Template editing app
+├── app.py                             # PosterO app
+├── app_clg_lo.py                      # LayoutGAN app
+├── requirements.txt                   # Dependencies
+└── README.md                          # This file
+```
+
+## 🔧 Advanced Usage
+
+### Batch Generation
+
+```python
+keywords_list = [
+    "cyberpunk neon city",
+    "vintage travel mountains",
+    "food restaurant elegant"
+]
+
+for i, keywords in enumerate(keywords_list):
+    image, brief, metrics = pipeline.generate_poster(
+        keywords=keywords,
+        output_path=f"outputs/batch_{i}.png",
+        seed=42 + i
+    )
+```
+
+### Custom Text Editing
+
+```python
+from add_text_to_poster import add_text_to_poster
+
+add_text_to_poster(
+    image_path="outputs/poster.png",
+    svg_path="outputs/poster_layout.svg",
+    title="CUSTOM TITLE",
+    captions=["Subtitle 1", "Subtitle 2"],
+    output_path="outputs/poster_edited.png",
+    style_prompt="cyberpunk neon"
+)
+```
+
+### Testing Pipeline
+
+```bash
+# Test all 3 modes
+python test_pipeline_postero.py
+
+# Test multiple images
+python test_multiple_images.py 3
+
+# Test underlay mode
+python test_underlay_mode.py
+```
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+```bash
+# .env file
+POE_API_KEY=your_key_here
+CUDA_VISIBLE_DEVICES=0
+```
+
+### Pipeline Settings
+
+```python
+pipeline = Key2PosterPipeline(
+    use_flux=True,              # Use FLUX.1 (vs SD)
+    use_template=True,          # Use templates
+    auto_template=False,        # Auto-generate templates
+    add_title=True,             # Add text overlay
+    remove_text=False,          # Remove existing text
+    super_resolution=False,     # Apply super-resolution
+    genre_lora=False,           # Use genre-specific LoRA
+    poster_type='movie',        # Poster type
+    style_preset='cinematic'    # Style preset
+)
+```
+
+## 📊 Performance
+
+| Hardware | Template Mode | LayoutGAN Mode | PosterO Mode |
+|----------|--------------|----------------|--------------|
+| RTX 4090 | ~8-12s | ~15-20s | ~25-30s |
+| RTX 3090 | ~10-15s | ~20-25s | ~30-40s |
+| RTX 3060 | ~20-30s | ~35-45s | ~50-60s |
+
+## 🐛 Troubleshooting
+
+### CUDA Out of Memory
+
+```bash
+# Use sequential CPU offload (already enabled)
+# Or reduce batch size / close other GPU apps
+```
+
+### "Cannot instantiate tokenizer"
+
+```bash
+pip install sentencepiece protobuf
+```
+
+### "No module named 'src'"
+
+```bash
+# Run from project root
+cd Computer_Vision_Project
+python app_unified.py
+```
+
+### Dimensions not divisible by 8
+
+Fixed automatically - templates now generate FLUX-compatible dimensions.
+
+## 📚 Documentation
+
+- **[Technical Report](TECHNICAL_REPORT.md)** - Architecture and implementation details
+- **[PIPELINE_CHANGES.md](PIPELINE_CHANGES.md)** - Pipeline evolution
+- **[POSTERO_GENERALIZED_QUICKSTART.md](POSTERO_GENERALIZED_QUICKSTART.md)** - PosterO setup guide
+
+## 🤝 Contributing
+
+Contributions welcome! Areas for improvement:
+- [ ] Additional font support
+- [ ] More style presets
+- [ ] Multi-language support
+- [ ] Real-time preview
+- [ ] Cloud deployment
+
+## 📄 License
+
+This project uses:
+- FLUX.1-schnell (Apache 2.0)
+- PosterO (Research use)
+- Custom code (MIT)
+
+## 🙏 Acknowledgments
+
+- **FLUX.1** by Black Forest Labs
+- **PosterO** (CVPR 2025) by PKU-ICST-MIPL
+- **LayoutGAN** for layout generation
+- **POE API** for LLM integration
+
+## 📧 Contact
+
+For questions or issues:
+- Open an issue on GitHub
+- Email: your.email@example.com
+
+---
+
+**Made with ❤️ using FLUX.1 + PosterO + LayoutGAN**
