@@ -27,16 +27,36 @@ Generate professional posters from 2-5 keywords using state-of-the-art AI models
 - **OS**: Linux
 - **Python**: 3.10+
 
+## 🔄 System Architecture Flow
+
+```
+User Keywords → LLM (POE API) → Enhanced Prompt → FLUX.1 → Base Image
+                                                              ↓
+                                                    Layout Generation
+                                                    ┌─────────┬─────────┬─────────┐
+                                                    │Template │LayoutGAN│ PosterO │
+                                                    │  Mode   │  Mode   │  Mode   │
+                                                    └─────────┴─────────┴─────────┘
+                                                              ↓
+                                                    Text Rendering → Final Poster
+```
+
+### Key Components:
+1. **LLM Integration**: POE API (Claude Sonnet 4.5) for prompt enhancement
+2. **Image Generation**: FLUX.1-schnell (4-step inference)
+3. **Layout Engine**: Template/LayoutGAN/PosterO (3 modes)
+4. **Text Rendering**: Dynamic font sizing + contrast-based coloring
+
 ## 🚀 Installation
 
-### 1. Clone Repository
+### Step 1: Clone Repository
 
 ```bash
 git clone https://github.com/yourusername/Computer_Vision_Project.git
 cd Computer_Vision_Project
 ```
 
-### 2. Create Virtual Environment
+### Step 2: Create Virtual Environment
 
 ```bash
 python -m venv .venv
@@ -45,36 +65,110 @@ source .venv/bin/activate  # Linux/macOS
 .venv\Scripts\activate  # Windows
 ```
 
-### 3. Install Dependencies
+### Step 3: Install Core Dependencies
 
 ```bash
-# Install PyTorch with CUDA support
+# Install PyTorch with CUDA support (REQUIRED)
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 
 # Install project dependencies
 pip install -r requirements.txt
 
-# Install additional dependencies for FLUX
+# Install FLUX dependencies
 pip install sentencepiece protobuf
-
-# Install PosterO dependencies (optional)
-pip install vllm transformers accelerate
 ```
 
-### 4. Setup API Keys
+### Step 4: Setup LLM API (POE)
 
-Create `.env` file in project root:
+**Why POE?** We use POE API instead of downloading LLaMA 3.1-8B (16GB) to save disk space and enable cloud-based LLM inference.
+
+1. **Get POE API Key**:
+   - Visit [poe.com](https://poe.com)
+   - Sign up/login
+   - Go to Settings → API Keys
+   - Create new API key
+
+2. **Create `.env` file** in project root:
 
 ```bash
-# POE API Key (for PosterO LLM)
+# POE API Key (for LLM prompt enhancement)
 POE_API_KEY=your_poe_api_key_here
+
+# Optional: Specify GPU
+CUDA_VISIBLE_DEVICES=0
 ```
 
-### 5. Download Models
+**LLM Flow**: `Keywords → POE API (Claude Sonnet 4.5) → Enhanced Description + Title + Captions`
+
+### Step 5: Install PosterO (Optional - for PosterO Mode)
+
+**PosterO** provides state-of-the-art content-aware layout generation (CVPR 2025).
+
+```bash
+# Clone PosterO repository
+git clone https://github.com/PKU-ICST-MIPL/PosterO_CVPR2025 PosterO
+cd PosterO
+
+# Install PosterO dependencies
+pip install vllm transformers accelerate timm opencv-python pandas segmentation-models-pytorch CairoSVG
+
+# Download design intent detection model weights
+# Visit: https://drive.google.com/drive/folders/1CUv13fZvySk1AV-r-7jbBX0wRCyVFFQG
+# Download and place in: PosterO/design_intent_detect/pku_128_1e-06_none/ckpt/
+
+cd ..
+```
+
+**PosterO Flow**:
+```
+FLUX Image → Part 1: Design Intent Detection (CNN) → Available Areas
+                                                           ↓
+                                      Part 2: LLM Layout Generation (POE API)
+                                                           ↓
+                                                    SVG Layout (bbox)
+                                                           ↓
+                                                  Text Rendering → Final Poster
+```
+
+### Step 6: Install RALF (Optional - for Advanced Layout)
+
+**RALF** provides retrieval-augmented layout generation (CVPR 2024).
+
+```bash
+# Clone RALF repository
+git clone https://github.com/CyberAgentAILab/RALF
+cd RALF
+
+# Install RALF dependencies (using Poetry)
+curl -sSL https://install.python-poetry.org | python3 -
+poetry install
+
+# Download pre-trained weights (optional)
+# Visit: https://drive.google.com/file/d/1b357gVAnCSqMfbP3Cc2ey6LCeoohfYAi/view
+
+cd ..
+```
+
+**RALF Flow**: `Content Image → Retrieve Similar Layouts → Adapt Layout → Generate`
+
+### Step 7: Download Models (Automatic)
 
 Models will be automatically downloaded on first run:
-- FLUX.1-schnell (~23GB)
-- Design intent detection model (for PosterO)
+- **FLUX.1-schnell** (~23GB) - from Hugging Face
+- **Design intent model** (for PosterO) - manual download required
+
+### Step 8: Verify Installation
+
+```bash
+# Test basic pipeline
+python -c "from src.pipeline import Key2PosterPipeline; print('✓ Installation successful!')"
+
+# Test FLUX availability
+python -c "import torch; print(f'✓ CUDA available: {torch.cuda.is_available()}')"
+
+# Test POE API
+python -c "import os; from dotenv import load_dotenv; load_dotenv(); print(f'✓ POE API Key: {os.getenv(\"POE_API_KEY\")[:10]}...')"
+```
 
 ## 🎯 Quick Start
 
@@ -212,22 +306,27 @@ image, brief, metrics = pipeline.generate_poster(
 
 ```
 Computer_Vision_Project/
-├── src/
-│   ├── pipeline.py                    # Main pipeline
+├── src/                               # Core pipeline modules
+│   ├── pipeline.py                    # Main pipeline (Template/LayoutGAN)
 │   ├── pipeline_postero.py            # PosterO pipeline
 │   ├── pipeline_postero_underlay.py   # PosterO with underlay
-│   ├── concept_expander.py            # LLM prompt enhancement
-│   ├── visual_generator_flux.py       # FLUX image generation
+│   ├── concept_expander.py            # LLM prompt enhancement (POE API)
+│   ├── visual_generator_flux.py       # FLUX.1 image generation
 │   ├── template_generator.py          # Auto template generation
 │   ├── evaluator.py                   # Quality evaluation
-│   └── ...
-├── PosterO/                           # PosterO integration
+│   └── Dataset/                       # Training datasets (gitignored)
+├── PosterO/                           # PosterO integration (install separately)
 │   ├── main.py                        # PosterO main script
-│   ├── llm_api_wrapper.py            # POE API wrapper
-│   ├── design_intent_detect/         # Part 1: Detection
-│   └── generalized_setting/          # Part 2: Generation
-├── templates/                         # Poster templates
+│   ├── llm_api_wrapper.py            # POE API wrapper (replaces LLaMA)
+│   ├── design_intent_detect/         # Part 1: CNN-based detection
+│   │   └── ckpt/                     # Model weights (download required)
+│   └── generalized_setting/          # Part 2: LLM generation
+├── RALF/                              # RALF integration (install separately)
+│   ├── image2layout/                 # Layout generation modules
+│   └── configs/                      # Configuration files
+├── templates/                         # Poster templates (JSON)
 │   ├── template1_layers.json
+│   ├── template2_layers.json
 │   └── ...
 ├── fonts/                             # Font files
 │   └── Graduate-Regular.ttf
@@ -236,8 +335,96 @@ Computer_Vision_Project/
 ├── app_editable.py                    # Template editing app
 ├── app.py                             # PosterO app
 ├── app_clg_lo.py                      # LayoutGAN app
+├── add_text_to_poster.py             # Text rendering module
+├── combine_simple.py                 # PosterO Part 1 + Part 2 integration
+├── test_pipeline_postero.py          # Testing script
 ├── requirements.txt                   # Dependencies
+├── .env                               # API keys (create manually)
+├── .gitignore                         # Git ignore rules
+├── LICENSE                            # MIT + Third-party licenses
 └── README.md                          # This file
+```
+
+## 🔍 Detailed Pipeline Flow
+
+### Template Mode Flow
+```
+1. User Input: "cyberpunk neon city"
+   ↓
+2. Concept Expander (POE API):
+   - Input: keywords + poster_type + style_preset
+   - Output: enhanced_description, title, 3 captions
+   ↓
+3. Template Selection:
+   - Load JSON template (6 types: split, grid, hero, sidebar, asymmetric, minimal)
+   - Extract image region bbox
+   ↓
+4. FLUX.1 Generation:
+   - Input: enhanced_description, dimensions (÷8 validated)
+   - Output: base image (512x768 or template size)
+   ↓
+5. Template Composition:
+   - Place FLUX image in template region
+   - Add background colors/gradients
+   ↓
+6. Text Rendering:
+   - Dynamic font sizing (60% of bbox height max)
+   - Contrast-based color selection
+   - Smooth anti-aliasing with circular outline
+   ↓
+7. Post-Processing:
+   - Resize to 720x1280
+   - Quality evaluation
+   - Save with metadata
+```
+
+### PosterO Mode Flow
+```
+1. User Input: "vintage travel mountains"
+   ↓
+2. Concept Expander (POE API):
+   - Same as Template Mode
+   ↓
+3. FLUX.1 Generation:
+   - Generate 512x768 base image
+   - Resize to 513x750 (PosterO input size)
+   ↓
+4. PosterO Part 1 - Design Intent Detection:
+   - CNN model detects available areas
+   - Input: 513x750 image
+   - Output: heatmap → grid-based regions (3x2 cells)
+   ↓
+5. PosterO Part 2 - LLM Layout Generation:
+   - POE API generates SVG layout
+   - Input: available_areas + element_types
+   - Output: SVG with bounding boxes (text, logo, underlay)
+   ↓
+6. Text Rendering:
+   - Parse SVG for text element bboxes
+   - Upscale to 720x1280 (scale bboxes proportionally)
+   - Render title + captions with dynamic sizing
+   ↓
+7. Post-Processing:
+   - Quality evaluation
+   - Save poster + SVG layout
+```
+
+### LayoutGAN Mode Flow
+```
+1. User Input: "music festival summer"
+   ↓
+2. Concept Expander (POE API):
+   - Same as Template Mode
+   ↓
+3. Auto Template Generation:
+   - LayoutGAN generates adaptive layout
+   - Content-aware positioning
+   ↓
+4. FLUX.1 Generation:
+   - Generate image for layout region
+   ↓
+5. Text Rendering + Post-Processing:
+   - Same as Template Mode
 ```
 
 ## 🔧 Advanced Usage
@@ -347,6 +534,124 @@ python app_unified.py
 ### Dimensions not divisible by 8
 
 Fixed automatically - templates now generate FLUX-compatible dimensions.
+
+## 🔗 External Dependencies
+
+### Required
+- **FLUX.1-schnell**: Auto-downloaded from Hugging Face (~23GB)
+- **POE API**: Cloud-based LLM (requires API key)
+
+### Optional (for PosterO Mode)
+- **PosterO**: [GitHub](https://github.com/PKU-ICST-MIPL/PosterO_CVPR2025)
+- **Design Intent Model**: [Google Drive](https://drive.google.com/drive/folders/1CUv13fZvySk1AV-r-7jbBX0wRCyVFFQG)
+
+### Optional (for Advanced Features)
+- **RALF**: [GitHub](https://github.com/CyberAgentAILab/RALF)
+- **PKU PosterLayout Dataset**: [GitHub](https://github.com/PKU-ICST-MIPL/PosterLayout-CVPR2023)
+- **CGL Dataset**: [GitHub](https://github.com/minzhouGithub/CGL-GAN)
+
+## 📚 Documentation
+
+- **[Technical Report](TECHNICAL_REPORT.md)** - Architecture and implementation details
+- **[PIPELINE_CHANGES.md](PIPELINE_CHANGES.md)** - Pipeline evolution
+- **[POSTERO_GENERALIZED_QUICKSTART.md](POSTERO_GENERALIZED_QUICKSTART.md)** - PosterO setup guide
+
+## 🔑 API Keys and Credentials
+
+### POE API Setup (Required for LLM)
+
+1. **Why POE instead of local LLaMA?**
+   - Saves 16GB disk space (no model download)
+   - Cloud-based inference (no local GPU for LLM)
+   - Access to Claude Sonnet 4.5 (better quality)
+
+2. **Get API Key**:
+   ```
+   1. Visit https://poe.com
+   2. Sign up/login
+   3. Settings → API Keys
+   4. Create new key
+   5. Copy to .env file
+   ```
+
+3. **Usage in Code**:
+   ```python
+   # PosterO/llm_api_wrapper.py
+   from poe_api_wrapper import PoeApi
+   
+   client = PoeApi(os.getenv("POE_API_KEY"))
+   response = client.send_message("Claude-Sonnet-4.5", prompt)
+   ```
+
+### Hugging Face Token (Optional)
+
+For faster FLUX.1 downloads:
+```bash
+huggingface-cli login
+# Enter your token from https://huggingface.co/settings/tokens
+```
+
+## 🎓 Learning Resources
+
+### Papers
+- **FLUX.1**: [Black Forest Labs Blog](https://blackforestlabs.ai/announcing-black-forest-labs/)
+- **PosterO**: [CVPR 2025 Paper](https://openaccess.thecvf.com/content/CVPR2025/html/Hsu_PosterO_Structuring_Layout_Trees_to_Enable_Language_Models_in_Generalized_CVPR_2025_paper.html)
+- **RALF**: [CVPR 2024 Paper](https://arxiv.org/abs/2311.13602)
+
+### Tutorials
+- **FLUX.1 Guide**: [Hugging Face Docs](https://huggingface.co/docs/diffusers/api/pipelines/flux)
+- **POE API**: [Documentation](https://creator.poe.com/docs/quick-start)
+- **Gradio**: [Official Guide](https://www.gradio.app/guides/quickstart)
+
+## 📚 Documentation
+
+- **[Technical Report](TECHNICAL_REPORT.md)** - Architecture and implementation details
+- **[PIPELINE_CHANGES.md](PIPELINE_CHANGES.md)** - Pipeline evolution
+- **[POSTERO_GENERALIZED_QUICKSTART.md](POSTERO_GENERALIZED_QUICKSTART.md)** - PosterO setup guide
+
+## 🎯 Quick Start Examples
+
+### Example 1: Generate Movie Poster
+```bash
+python app_unified.py
+# In browser:
+# - Mode: Template
+# - Keywords: "space adventure astronaut"
+# - Type: Movie
+# - Style: Cinematic
+# - Click Generate
+```
+
+### Example 2: Generate Event Poster with PosterO
+```bash
+python app.py
+# In browser:
+# - Keywords: "summer music festival beach"
+# - Type: Event
+# - Style: Bright
+# - Click Generate
+```
+
+### Example 3: Batch Generation
+```python
+from src.pipeline import Key2PosterPipeline
+
+pipeline = Key2PosterPipeline(use_flux=True, use_template=True)
+
+keywords = [
+    "cyberpunk neon city",
+    "vintage travel mountains",
+    "food restaurant elegant"
+]
+
+for i, kw in enumerate(keywords):
+    image, brief, metrics = pipeline.generate_poster(
+        keywords=kw,
+        output_path=f"outputs/poster_{i}.png",
+        seed=42
+    )
+    print(f"Generated {i+1}/{len(keywords)}: {brief['title']}")
+```
 
 ## 📚 Documentation
 
