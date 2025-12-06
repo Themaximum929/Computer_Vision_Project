@@ -1,11 +1,7 @@
 """PosterO Generalized Layout Generation Integration"""
 import sys
 import os
-
-# Add PosterO generalized_setting to path
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-postero_path = os.path.join(project_root, 'PosterO', 'generalized_setting')
-sys.path.insert(0, postero_path)
+sys.path.append('/home/themaximum/Documents/GitHub/PosterO-CVPR2025/generalized_setting')
 
 import torch
 import numpy as np
